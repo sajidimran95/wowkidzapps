@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:my_first_app/core/network/api_exception.dart';
 import 'package:my_first_app/core/network/json_utils.dart';
 import 'package:my_first_app/data/api/wowkidz_api.dart';
+import 'package:my_first_app/data/models/announcement_bar_data.dart';
+import 'package:my_first_app/data/models/announcement_offer.dart';
+import 'package:my_first_app/data/models/app_popup.dart';
 import 'package:my_first_app/data/models/category_item.dart';
 import 'package:my_first_app/data/models/feature_item.dart';
+import 'package:my_first_app/data/models/newsletter_block.dart';
 import 'package:my_first_app/data/models/product.dart';
 import 'package:my_first_app/data/models/promo_banner.dart';
 
@@ -33,6 +37,24 @@ class CatalogStore extends ChangeNotifier {
   List<Product> recommended = [];
   List<Product> allNewArrivals = [];
   List<Product> allRecommended = [];
+  List<Product> campaignProducts = [];
+  List<AppPopup> popups = [];
+  AnnouncementBarData? announcementBar;
+  AnnouncementOffer? announcementOffer;
+  NewsletterBlock newsletter = const NewsletterBlock(
+    title: 'Get 50% Discount',
+    details:
+        'Subscribe to our newsletter for early discount offers, latest news & promos.',
+  );
+
+  String flashDealTitle = 'Flash Deal';
+  String hotCollectionTitle = 'Hot Collection';
+  String newArrivalTitle = 'New Arrival';
+  String recommendedTitle = 'Recommended';
+  String campaignTitle = 'Campaign Offer';
+  String? campaignEndDate;
+  bool showCampaign = true;
+  bool showHotCollection = true;
 
   final Map<String, Product> _productById = {};
   final Map<String, List<Product>> _productsByCategory = {};
@@ -126,6 +148,7 @@ class CatalogStore extends ChangeNotifier {
     _applySideBanners(map['side_banners'] ?? map['banners']);
     _applyCategories(map['categories']);
     _applySections(map['sections'] ?? map);
+    _applyPromotions(map);
     notifyListeners();
   }
 
@@ -162,6 +185,7 @@ class CatalogStore extends ChangeNotifier {
     hotCollection = await _loadProductSection('hot_collection');
     newArrivals = await _loadProductSection('new_arrival');
     recommended = await _loadProductSection('recommended');
+    campaignProducts = await _loadProductSection('campaign');
     allNewArrivals = await _loadProductSection('new_arrival', viewAll: true);
     allRecommended = await _loadProductSection('recommended', viewAll: true);
   }
@@ -230,12 +254,66 @@ class CatalogStore extends ChangeNotifier {
       map['new_arrival'] ?? map['new_arrivals'] ?? map['newArrivals'],
     );
     recommended = _parseProducts(map['recommended']);
+    campaignProducts = _parseProducts(map['campaign']);
     allNewArrivals = _parseProducts(
       map['all_new_arrivals'] ?? map['new_arrival_all'] ?? newArrivals,
     );
     allRecommended = _parseProducts(
       map['all_recommended'] ?? map['recommended_all'] ?? recommended,
     );
+    campaignProducts = _parseProducts(map['campaign']);
+  }
+
+  void _applyPromotions(Map<String, dynamic> map) {
+    final popupList = asJsonList(map['popups']);
+    if (popupList.isNotEmpty) {
+      popups = popupList
+          .map((e) => AppPopup.fromJson(asJsonMap(e)))
+          .where((p) => p.imageUrl.isNotEmpty)
+          .toList();
+    }
+
+    final barRaw = map['announcement_bar'];
+    if (barRaw is Map) {
+      announcementBar = AnnouncementBarData.fromJson(asJsonMap(barRaw));
+    } else {
+      announcementBar = null;
+    }
+
+    final offerRaw = map['announcement_offer'];
+    if (offerRaw is Map) {
+      announcementOffer = AnnouncementOffer.fromJson(asJsonMap(offerRaw));
+    } else {
+      announcementOffer = null;
+    }
+
+    final newsletterRaw = map['newsletter'];
+    if (newsletterRaw is Map) {
+      newsletter = NewsletterBlock.fromJson(asJsonMap(newsletterRaw));
+    }
+
+    final campaignRaw = map['campaign'];
+    if (campaignRaw is Map) {
+      final campaignMap = asJsonMap(campaignRaw);
+      showCampaign = readBool(campaignMap['is_active'], showCampaign);
+      campaignTitle = readString(campaignMap['title'], campaignTitle);
+      campaignEndDate = readNullableString(campaignMap['end_date']);
+      final products = _parseProducts(campaignMap['products']);
+      if (products.isNotEmpty) {
+        campaignProducts = products;
+      }
+    }
+
+    final labels = asJsonMap(map['section_labels']);
+    flashDealTitle = readString(labels['flash_deal'], flashDealTitle);
+    hotCollectionTitle = readString(labels['hot_collection'], hotCollectionTitle);
+    newArrivalTitle = readString(labels['new_arrival'], newArrivalTitle);
+    recommendedTitle = readString(labels['recommended'], recommendedTitle);
+    campaignTitle = readString(labels['campaign'], campaignTitle);
+
+    final visibility = asJsonMap(map['section_visibility']);
+    showCampaign = readBool(visibility['campaign'], showCampaign);
+    showHotCollection = readBool(visibility['hot_collection'], showHotCollection);
   }
 
   List<Product> _parseProducts(dynamic raw) {

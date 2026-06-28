@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/api/wowkidz_api.dart';
+import 'package:my_first_app/data/models/newsletter_block.dart';
 
 class NewsletterBanner extends StatefulWidget {
-  const NewsletterBanner({super.key});
+  const NewsletterBanner({super.key, required this.block});
+
+  final NewsletterBlock block;
 
   @override
   State<NewsletterBanner> createState() => _NewsletterBannerState();
@@ -64,7 +67,7 @@ class _NewsletterBannerState extends State<NewsletterBanner> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Get 50% Discount',
+              widget.block.title,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -72,7 +75,7 @@ class _NewsletterBannerState extends State<NewsletterBanner> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Subscribe to our newsletter for early discount offers, latest news & promos.',
+              widget.block.details,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.white.withValues(alpha: 0.85),
                     height: 1.4,
