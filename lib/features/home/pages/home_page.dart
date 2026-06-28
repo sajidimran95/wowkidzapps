@@ -6,7 +6,6 @@ import 'package:my_first_app/features/home/widgets/home_app_bar.dart';
 import 'package:my_first_app/features/home/widgets/newsletter_banner.dart';
 import 'package:my_first_app/features/home/widgets/product_section.dart';
 import 'package:my_first_app/features/home/widgets/promo_banner_carousel.dart';
-import 'package:my_first_app/features/home/widgets/search_bar_widget.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -20,7 +19,6 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SearchBarWidget(),
               const PromoBannerCarousel(),
               const FeatureStrip(),
               const CategoryGrid(),
