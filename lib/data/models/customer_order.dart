@@ -1,0 +1,112 @@
+import 'package:flutter/material.dart';
+import 'package:my_first_app/core/theme/app_colors.dart';
+
+enum OrderStatus {
+  confirmed,
+  processing,
+  packed,
+  outForDelivery,
+  delivered,
+  cancelled,
+}
+
+extension OrderStatusX on OrderStatus {
+  String get label => switch (this) {
+        OrderStatus.confirmed => 'Confirmed',
+        OrderStatus.processing => 'Processing',
+        OrderStatus.packed => 'Packed',
+        OrderStatus.outForDelivery => 'Out for Delivery',
+        OrderStatus.delivered => 'Delivered',
+        OrderStatus.cancelled => 'Cancelled',
+      };
+
+  Color get color => switch (this) {
+        OrderStatus.confirmed => AppColors.secondary,
+        OrderStatus.processing => AppColors.accent,
+        OrderStatus.packed => const Color(0xFF3B82F6),
+        OrderStatus.outForDelivery => AppColors.primary,
+        OrderStatus.delivered => AppColors.success,
+        OrderStatus.cancelled => AppColors.discount,
+      };
+
+  IconData get icon => switch (this) {
+        OrderStatus.confirmed => Icons.check_circle_outline,
+        OrderStatus.processing => Icons.inventory_2_outlined,
+        OrderStatus.packed => Icons.all_inbox_outlined,
+        OrderStatus.outForDelivery => Icons.local_shipping_outlined,
+        OrderStatus.delivered => Icons.done_all,
+        OrderStatus.cancelled => Icons.cancel_outlined,
+      };
+
+  bool get isRunning =>
+      this != OrderStatus.delivered && this != OrderStatus.cancelled;
+
+  int get stepIndex => switch (this) {
+        OrderStatus.confirmed => 0,
+        OrderStatus.processing => 1,
+        OrderStatus.packed => 2,
+        OrderStatus.outForDelivery => 3,
+        OrderStatus.delivered => 4,
+        OrderStatus.cancelled => -1,
+      };
+}
+
+const kOrderTrackingSteps = [
+  OrderStatus.confirmed,
+  OrderStatus.processing,
+  OrderStatus.packed,
+  OrderStatus.outForDelivery,
+  OrderStatus.delivered,
+];
+
+class OrderStatusEvent {
+  const OrderStatusEvent({required this.status, required this.at});
+
+  final OrderStatus status;
+  final DateTime at;
+}
+
+String formatOrderStatusDateTime(DateTime dateTime) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  final hour = dateTime.hour;
+  final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+  final minute = dateTime.minute.toString().padLeft(2, '0');
+  final period = hour >= 12 ? 'PM' : 'AM';
+
+  return '${dateTime.day} ${months[dateTime.month - 1]} ${dateTime.year}, '
+      '$displayHour:$minute $period';
+}
+
+class CustomerOrder {
+  const CustomerOrder({
+    required this.id,
+    required this.dateLabel,
+    required this.total,
+    required this.status,
+    required this.itemCount,
+    required this.itemsSummary,
+    required this.statusHistory,
+    this.address = 'Dhaka, Bangladesh',
+    this.paymentMethod = 'Cash on Delivery',
+  });
+
+  final String id;
+  final String dateLabel;
+  final double total;
+  final OrderStatus status;
+  final int itemCount;
+  final String itemsSummary;
+  final List<OrderStatusEvent> statusHistory;
+  final String address;
+  final String paymentMethod;
+
+  DateTime? timestampFor(OrderStatus status) {
+    for (final event in statusHistory) {
+      if (event.status == status) return event.at;
+    }
+    return null;
+  }
+}
