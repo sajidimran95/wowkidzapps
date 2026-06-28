@@ -84,24 +84,47 @@ abstract final class MockData {
     ),
   ];
 
-  static const banners = <PromoBanner>[
+  static const sliderBanners = <PromoBanner>[
     PromoBanner(
       title: 'Kids Fashion Sale',
       subtitle: 'Up to 50% off on party wear',
       gradient: [Color(0xFFE91E8C), Color(0xFFFF6B9D)],
       icon: Icons.celebration_outlined,
+      imageUrl:
+          'https://images.unsplash.com/photo-1519238263530-99bdd11df2ca?w=900&h=450&fit=crop',
     ),
     PromoBanner(
       title: 'New Arrivals',
       subtitle: 'Fresh styles for every season',
       gradient: [Color(0xFF7C4DFF), Color(0xFFB388FF)],
       icon: Icons.auto_awesome_outlined,
+      imageUrl:
+          'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=900&h=450&fit=crop',
     ),
     PromoBanner(
-      title: 'Flash Deals',
-      subtitle: 'Limited time offers — grab now!',
+      title: 'Baby Essentials',
+      subtitle: 'Care, toys & accessories',
       gradient: [Color(0xFFFF6B35), Color(0xFFFFB347)],
-      icon: Icons.bolt_outlined,
+      icon: Icons.child_care,
+      imageUrl:
+          'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=900&h=450&fit=crop',
+    ),
+  ];
+
+  static const homeSideBanners = <PromoBanner>[
+    PromoBanner(
+      title: 'Boys Collection',
+      subtitle: 'Trendy combos',
+      gradient: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
+      imageUrl:
+          'https://images.unsplash.com/photo-1503919005310-48f16f5f8f4f?w=500&h=280&fit=crop',
+    ),
+    PromoBanner(
+      title: 'Girls Collection',
+      subtitle: 'Party wear',
+      gradient: [Color(0xFFEC4899), Color(0xFFF472B6)],
+      imageUrl:
+          'https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=500&h=280&fit=crop',
     ),
   ];
 

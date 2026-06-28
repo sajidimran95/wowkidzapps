@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/models/category_item.dart';
+import 'package:my_first_app/shared/widgets/gradient_section_title.dart';
 
 class CategoryImage extends StatelessWidget {
   const CategoryImage({
@@ -19,7 +20,16 @@ class CategoryImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = _buildImage();
+    if (!category.showImage) {
+      return _CategoryIconPanel(
+        category: category,
+        borderRadius: borderRadius,
+        fill: fill,
+        size: size,
+      );
+    }
+
+    final image = _buildNetworkImage();
 
     if (fill) {
       return Container(
@@ -62,7 +72,7 @@ class CategoryImage extends StatelessWidget {
     );
   }
 
-  Widget _buildImage() {
+  Widget _buildNetworkImage() {
     return CachedNetworkImage(
       imageUrl: category.imageUrl,
       fit: BoxFit.cover,
@@ -87,5 +97,64 @@ class CategoryImage extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _CategoryIconPanel extends StatelessWidget {
+  const _CategoryIconPanel({
+    required this.category,
+    required this.borderRadius,
+    required this.fill,
+    required this.size,
+  });
+
+  final CategoryItem category;
+  final double borderRadius;
+  final bool fill;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final panel = Container(
+      width: fill ? double.infinity : size,
+      height: fill ? double.infinity : size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            category.color,
+            Color.lerp(category.color, AppColors.primary, 0.25)!,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: category.color.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            category.icon,
+            size: fill ? 42 : size * 0.42,
+            color: AppColors.primary.withValues(alpha: 0.75),
+          ),
+          if (fill) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: GradientSectionTitle(
+                title: category.name,
+                style: TextStyle(
+                  fontSize: category.name.length > 14 ? 12 : 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    return panel;
   }
 }

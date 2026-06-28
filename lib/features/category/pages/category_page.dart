@@ -5,7 +5,7 @@ import 'package:my_first_app/data/models/category_item.dart';
 import 'package:my_first_app/features/category/pages/category_products_page.dart';
 import 'package:my_first_app/features/home/widgets/search_bar_widget.dart';
 import 'package:my_first_app/shared/widgets/category_image.dart';
-import 'package:my_first_app/shared/widgets/gradient_section_title.dart';
+import 'package:my_first_app/shared/widgets/section_header.dart';
 
 class CategoryPage extends StatelessWidget {
   const CategoryPage({super.key});
@@ -18,21 +18,25 @@ class CategoryPage extends StatelessWidget {
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const GradientSectionTitle(title: 'Categories'),
-                    const SizedBox(height: 4),
-                    Text(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SectionHeader(title: 'Categories'),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    child: Text(
                       'Browse ${MockData.categories.length} collections',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.textMuted,
+                          ),
                     ),
-                    const SizedBox(height: 12),
-                    const SearchBarWidget(),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: SearchBarWidget(),
+                  ),
+                ],
               ),
             ),
             SliverPadding(

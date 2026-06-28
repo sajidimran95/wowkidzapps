@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:my_first_app/data/mock/mock_data.dart';
 import 'package:my_first_app/data/models/promo_banner.dart';
@@ -21,7 +22,7 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted || !_controller.hasClients) return;
-      final next = (_currentPage + 1) % MockData.banners.length;
+      final next = (_currentPage + 1) % MockData.sliderBanners.length;
       _controller.animateToPage(
         next,
         duration: const Duration(milliseconds: 400),
@@ -44,21 +45,21 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
       child: Column(
         children: [
           SizedBox(
-            height: 150,
+            height: 168,
             child: PageView.builder(
               controller: _controller,
               onPageChanged: (index) => setState(() => _currentPage = index),
-              itemCount: MockData.banners.length,
-              itemBuilder: (_, index) => _BannerCard(
-                banner: MockData.banners[index],
+              itemCount: MockData.sliderBanners.length,
+              itemBuilder: (_, index) => _SliderCard(
+                banner: MockData.sliderBanners[index],
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
-              MockData.banners.length,
+              MockData.sliderBanners.length,
               (index) => AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -66,12 +67,25 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
                 height: 6,
                 decoration: BoxDecoration(
                   color: _currentPage == index
-                      ? MockData.banners[index].gradient.first
+                      ? MockData.sliderBanners[index].gradient.first
                       : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              for (var i = 0; i < MockData.homeSideBanners.length; i++) ...[
+                if (i > 0) const SizedBox(width: 10),
+                Expanded(
+                  child: _SideBannerCard(
+                    banner: MockData.homeSideBanners[i],
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -79,8 +93,8 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
   }
 }
 
-class _BannerCard extends StatelessWidget {
-  const _BannerCard({required this.banner});
+class _SliderCard extends StatelessWidget {
+  const _SliderCard({required this.banner});
 
   final PromoBanner banner;
 
@@ -89,33 +103,34 @@ class _BannerCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: banner.gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: banner.gradient.first.withValues(alpha: 0.35),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: banner.gradient.first.withValues(alpha: 0.28),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          Positioned(
-            right: -20,
-            bottom: -20,
-            child: Icon(
-              banner.icon,
-              size: 120,
-              color: Colors.white.withValues(alpha: 0.15),
+          _BannerImage(banner: banner),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Colors.black.withValues(alpha: 0.45),
+                  Colors.black.withValues(alpha: 0.1),
+                ],
+              ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -127,35 +142,138 @@ class _BannerCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  banner.subtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Shop Now',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: banner.gradient.first,
-                          fontWeight: FontWeight.w700,
+                if (banner.subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    banner.subtitle,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.92),
                         ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SideBannerCard extends StatelessWidget {
+  const _SideBannerCard({required this.banner});
+
+  final PromoBanner banner;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        height: 96,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: banner.gradient.first.withValues(alpha: 0.18),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _BannerImage(banner: banner),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.5),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: Text(
+                  banner.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BannerImage extends StatelessWidget {
+  const _BannerImage({required this.banner});
+
+  final PromoBanner banner;
+
+  @override
+  Widget build(BuildContext context) {
+    if (banner.imageUrl != null) {
+      return CachedNetworkImage(
+        imageUrl: banner.imageUrl!,
+        fit: BoxFit.cover,
+        placeholder: (_, _) => DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: banner.gradient),
+          ),
+          child: const Center(
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ),
+        errorWidget: (_, _, _) => DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: banner.gradient),
+          ),
+          child: Icon(
+            banner.icon,
+            size: 40,
+            color: Colors.white.withValues(alpha: 0.5),
+          ),
+        ),
+      );
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: banner.gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Align(
+        alignment: Alignment.bottomRight,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Icon(
+            banner.icon,
+            size: 48,
+            color: Colors.white.withValues(alpha: 0.25),
+          ),
+        ),
       ),
     );
   }

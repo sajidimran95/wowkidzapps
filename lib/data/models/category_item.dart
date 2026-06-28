@@ -6,10 +6,12 @@ class CategoryItem {
     required this.imageUrl,
     required this.color,
     this.icon = Icons.category_outlined,
+    this.showImage = true,
   });
 
   final String name;
   final String imageUrl;
   final Color color;
   final IconData icon;
+  final bool showImage;
 }
