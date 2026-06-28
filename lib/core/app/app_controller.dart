@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/data/mock/customer_profile_mock.dart';
+import 'package:my_first_app/data/mock/customer_orders_mock.dart';
 import 'package:my_first_app/data/mock/mock_data.dart';
 import 'package:my_first_app/data/models/cart_item.dart';
+import 'package:my_first_app/data/models/customer_order.dart';
 import 'package:my_first_app/data/models/product.dart';
 import 'package:my_first_app/data/models/saved_address.dart';
 import 'package:my_first_app/data/models/support_ticket.dart';
@@ -56,6 +58,7 @@ class AppController extends ChangeNotifier {
   String? userEmail;
   String? userRole;
   String? userPassword;
+  String? userProfileImageUrl;
 
   String? get userContact => userPhone ?? userEmail;
 
@@ -101,6 +104,7 @@ class AppController extends ChangeNotifier {
     userEmail = null;
     userRole = null;
     userPassword = null;
+    userProfileImageUrl = null;
     _addresses.clear();
     _supportTickets.clear();
     _wishlistProductIds.clear();
@@ -123,10 +127,37 @@ class AppController extends ChangeNotifier {
     required String name,
     String? phone,
     String? email,
+    String? profileImageUrl,
   }) {
     userName = name;
     userPhone = phone;
     userEmail = email;
+    if (profileImageUrl != null) {
+      userProfileImageUrl =
+          profileImageUrl.trim().isEmpty ? null : profileImageUrl.trim();
+    }
+    notifyListeners();
+  }
+
+  void updateProfileImage(String? url) {
+    userProfileImageUrl =
+        (url == null || url.trim().isEmpty) ? null : url.trim();
+    notifyListeners();
+  }
+
+  OrderPaymentStatus paymentStatusFor(CustomerOrder order) {
+    final fresh = CustomerOrdersMock.findById(order.id);
+    return fresh?.paymentStatus ?? order.paymentStatus;
+  }
+
+  void markOrderPaid(String orderId) {
+    final order = CustomerOrdersMock.findById(orderId);
+    if (order == null || order.paymentStatus == OrderPaymentStatus.paid) {
+      return;
+    }
+    CustomerOrdersMock.updateOrder(
+      order.copyWith(paymentStatus: OrderPaymentStatus.paid),
+    );
     notifyListeners();
   }
 
@@ -239,6 +270,9 @@ class AppController extends ChangeNotifier {
   void goToCategory([BuildContext? context]) => goToTab(1, context);
 
   void goToHome([BuildContext? context]) => goToTab(0, context);
+
+  /// Leaves customer dashboard and opens the storefront home tab.
+  void goToShop([BuildContext? context]) => goToHome(context);
 
   void _popToRoot(BuildContext? context) {
     if (context != null && context.mounted) {

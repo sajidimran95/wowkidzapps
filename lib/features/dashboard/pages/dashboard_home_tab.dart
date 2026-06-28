@@ -3,6 +3,7 @@ import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/mock/customer_orders_mock.dart';
 import 'package:my_first_app/features/dashboard/widgets/dashboard_order_tile.dart';
+import 'package:my_first_app/shared/widgets/customer_profile_avatar.dart';
 
 class DashboardHomeTab extends StatelessWidget {
   const DashboardHomeTab({
@@ -28,6 +29,20 @@ class DashboardHomeTab extends StatelessWidget {
             _WelcomeCard(
               name: controller.userName ?? 'Customer',
               contact: controller.userContact ?? '',
+              imageUrl: controller.userProfileImageUrl,
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => controller.goToShop(context),
+                icon: const Icon(Icons.storefront_outlined),
+                label: const Text('Go Shop'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: AppColors.secondary,
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -57,9 +72,7 @@ class DashboardHomeTab extends StatelessWidget {
                     label: 'Cart',
                     value: '${controller.cartCount}',
                     color: AppColors.accent,
-                    onTap: () {
-                      controller.goToHome(context);
-                    },
+                    onTap: () => controller.goToShop(context),
                   ),
                 ),
               ],
@@ -105,10 +118,15 @@ class DashboardHomeTab extends StatelessWidget {
 }
 
 class _WelcomeCard extends StatelessWidget {
-  const _WelcomeCard({required this.name, required this.contact});
+  const _WelcomeCard({
+    required this.name,
+    required this.contact,
+    this.imageUrl,
+  });
 
   final String name;
   final String contact;
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -122,17 +140,13 @@ class _WelcomeCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          CustomerProfileAvatar(
+            imageUrl: imageUrl,
+            name: name,
             radius: 32,
             backgroundColor: Colors.white24,
-            child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : 'C',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            foregroundColor: Colors.white,
+            fontSize: 22,
           ),
           const SizedBox(width: 16),
           Expanded(

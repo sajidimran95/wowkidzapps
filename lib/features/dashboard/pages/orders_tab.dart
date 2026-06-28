@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/mock/customer_orders_mock.dart';
 import 'package:my_first_app/data/models/customer_order.dart';
@@ -58,40 +59,45 @@ class _OrdersTabState extends State<OrdersTab>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          color: AppColors.surface,
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textMuted,
-            indicatorColor: AppColors.primary,
-            tabs: _filters.map((f) {
-              final count = _ordersForFilter(f).length;
-              return Tab(text: '${f.label} ($count)');
-            }).toList(),
-          ),
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: _filters.map((filter) {
-              final orders = _ordersForFilter(filter);
-              if (orders.isEmpty) {
-                return const _EmptyOrders();
-              }
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: orders.length,
-                itemBuilder: (_, i) => DashboardOrderTile(order: orders[i]),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
+    return ListenableBuilder(
+      listenable: AppController.instance,
+      builder: (context, _) {
+        return Column(
+          children: [
+            Container(
+              color: AppColors.surface,
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                labelColor: AppColors.primary,
+                unselectedLabelColor: AppColors.textMuted,
+                indicatorColor: AppColors.primary,
+                tabs: _filters.map((f) {
+                  final count = _ordersForFilter(f).length;
+                  return Tab(text: '${f.label} ($count)');
+                }).toList(),
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: _filters.map((filter) {
+                  final orders = _ordersForFilter(filter);
+                  if (orders.isEmpty) {
+                    return const _EmptyOrders();
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: orders.length,
+                    itemBuilder: (_, i) => DashboardOrderTile(order: orders[i]),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

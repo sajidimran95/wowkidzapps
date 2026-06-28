@@ -4,6 +4,7 @@ import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/mock/customer_orders_mock.dart';
 import 'package:my_first_app/data/models/customer_order.dart';
 import 'package:my_first_app/features/dashboard/pages/order_detail_page.dart';
+import 'package:my_first_app/features/dashboard/utils/pay_now_flow.dart';
 
 class DashboardOrderTile extends StatelessWidget {
   const DashboardOrderTile({
@@ -19,71 +20,103 @@ class DashboardOrderTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = AppController.instance;
 
-    return Card(
-      margin: EdgeInsets.only(bottom: compact ? 8 : 10),
-      child: InkWell(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OrderDetailPage(order: order),
-          ),
-        ),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: order.status.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(order.status.icon, color: order.status.color),
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final currentPayment = controller.paymentStatusFor(order);
+
+        return Card(
+          margin: EdgeInsets.only(bottom: compact ? 8 : 10),
+          child: InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => OrderDetailPage(order: order),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            ),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: order.status.color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(order.status.icon, color: order.status.color),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  order.id,
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  controller.formatPrice(order.total),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              order.itemsSummary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Text(
+                                  order.dateLabel,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                        color: AppColors.textMuted,
+                                      ),
+                                ),
+                                const SizedBox(width: 8),
+                                _StatusChip(status: order.status),
+                                const SizedBox(width: 6),
+                                _PaymentChip(status: currentPayment),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (currentPayment == OrderPaymentStatus.unpaid) ...[
+                    const SizedBox(height: 10),
                     Row(
                       children: [
-                        Text(
-                          order.id,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        const Spacer(),
-                        Text(
-                          controller.formatPrice(order.total),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => startPayNowFlow(context, order),
+                            icon: const Icon(Icons.payments_outlined, size: 18),
+                            label: const Text('Pay Now'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.discount,
+                              side: const BorderSide(color: AppColors.discount),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      order.itemsSummary,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Text(
-                          order.dateLabel,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: AppColors.textMuted,
-                              ),
                         ),
                         const SizedBox(width: 8),
-                        _StatusChip(status: order.status),
-                        const Spacer(),
                         TextButton.icon(
                           onPressed: () => Navigator.push(
                             context,
@@ -93,21 +126,34 @@ class DashboardOrderTile extends StatelessWidget {
                           ),
                           icon: const Icon(Icons.visibility_outlined, size: 16),
                           label: const Text('View'),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ] else
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => OrderDetailPage(order: order),
+                          ),
+                        ),
+                        icon: const Icon(Icons.visibility_outlined, size: 16),
+                        label: const Text('View'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -116,6 +162,31 @@ class _StatusChip extends StatelessWidget {
   const _StatusChip({required this.status});
 
   final OrderStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: status.color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        status.label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: status.color,
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentChip extends StatelessWidget {
+  const _PaymentChip({required this.status});
+
+  final OrderPaymentStatus status;
 
   @override
   Widget build(BuildContext context) {

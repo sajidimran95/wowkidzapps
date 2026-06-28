@@ -35,36 +35,50 @@ abstract final class MockData {
   static const categories = <CategoryItem>[
     CategoryItem(
       name: 'Girls Clothing',
+      imageUrl:
+          'https://images.unsplash.com/photo-1519238263530-99bdd11df2ca?w=300&h=300&fit=crop',
       icon: Icons.girl_outlined,
       color: AppColors.categoryPink,
     ),
     CategoryItem(
       name: 'Boys Clothing',
+      imageUrl:
+          'https://images.unsplash.com/photo-1503919005310-48f16f5f8f4f?w=300&h=300&fit=crop',
       icon: Icons.boy_outlined,
       color: AppColors.categoryBlue,
     ),
     CategoryItem(
       name: 'Footwear',
+      imageUrl:
+          'https://images.unsplash.com/photo-1515347619252-60a4bf4fff4f?w=300&h=300&fit=crop',
       icon: Icons.ice_skating_outlined,
       color: AppColors.categoryYellow,
     ),
     CategoryItem(
       name: 'Baby Care',
+      imageUrl:
+          'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=300&h=300&fit=crop',
       icon: Icons.child_care_outlined,
       color: AppColors.categoryGreen,
     ),
     CategoryItem(
       name: 'Gents Clothing',
+      imageUrl:
+          'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=300&h=300&fit=crop',
       icon: Icons.man_outlined,
       color: AppColors.categoryPurple,
     ),
     CategoryItem(
       name: 'Toys & Play',
+      imageUrl:
+          'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop',
       icon: Icons.toys_outlined,
       color: AppColors.categoryOrange,
     ),
     CategoryItem(
       name: 'Baby Accessories',
+      imageUrl:
+          'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=300&h=300&fit=crop',
       icon: Icons.baby_changing_station_outlined,
       color: AppColors.categoryTeal,
     ),

@@ -4,6 +4,8 @@ import 'package:my_first_app/data/mock/mock_data.dart';
 import 'package:my_first_app/data/models/category_item.dart';
 import 'package:my_first_app/features/category/pages/category_products_page.dart';
 import 'package:my_first_app/features/home/widgets/search_bar_widget.dart';
+import 'package:my_first_app/shared/widgets/category_image.dart';
+import 'package:my_first_app/shared/widgets/gradient_section_title.dart';
 
 class CategoryPage extends StatelessWidget {
   const CategoryPage({super.key});
@@ -21,12 +23,7 @@ class CategoryPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Categories',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
+                    const GradientSectionTitle(title: 'Categories'),
                     const SizedBox(height: 4),
                     Text(
                       'Browse ${MockData.categories.length} collections',
@@ -45,7 +42,7 @@ class CategoryPage extends StatelessWidget {
                   crossAxisCount: 2,
                   mainAxisSpacing: 14,
                   crossAxisSpacing: 14,
-                  childAspectRatio: 0.92,
+                  childAspectRatio: 0.82,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
@@ -86,38 +83,40 @@ class _CategoryTile extends StatelessWidget {
           border: Border.all(color: AppColors.border),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: category.color,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(
-                category.icon,
-                size: 36,
-                color: AppColors.textPrimary.withValues(alpha: 0.75),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                child: CategoryImage(
+                  category: category,
+                  fill: true,
+                  borderRadius: 16,
+                ),
               ),
             ),
-            const SizedBox(height: 12),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                category.name,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '$count products',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.textMuted,
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                children: [
+                  Text(
+                    category.name,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$count products',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

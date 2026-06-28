@@ -35,6 +35,8 @@ abstract final class CustomerOrdersMock {
       status: OrderStatus.processing,
       itemCount: 2,
       itemsSummary: 'School Bag, Water Bottle',
+      paymentMethod: 'bKash',
+      paymentStatus: OrderPaymentStatus.unpaid,
       statusHistory: [
         OrderStatusEvent(
           status: OrderStatus.confirmed,
@@ -53,6 +55,8 @@ abstract final class CustomerOrdersMock {
       status: OrderStatus.packed,
       itemCount: 1,
       itemsSummary: 'Party Dress (Pink)',
+      paymentMethod: 'Nagad',
+      paymentStatus: OrderPaymentStatus.unpaid,
       statusHistory: [
         OrderStatusEvent(
           status: OrderStatus.confirmed,
@@ -158,4 +162,16 @@ abstract final class CustomerOrdersMock {
       orders.where((o) => o.status == status).length;
 
   static int get runningCount => running.length;
+
+  static CustomerOrder? findById(String id) {
+    for (final order in orders) {
+      if (order.id == id) return order;
+    }
+    return null;
+  }
+
+  static void updateOrder(CustomerOrder updated) {
+    final index = orders.indexWhere((o) => o.id == updated.id);
+    if (index != -1) orders[index] = updated;
+  }
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/mock/mock_data.dart';
 import 'package:my_first_app/features/home/widgets/category_grid.dart';
 import 'package:my_first_app/features/home/widgets/feature_strip.dart';
@@ -33,12 +32,10 @@ class HomePage extends StatelessWidget {
               ProductSection(
                 title: 'Hot Collection',
                 products: MockData.hotCollection,
-                accentColor: AppColors.accent,
               ),
               ProductSection(
                 title: 'New Arrival',
                 products: MockData.newArrivals,
-                accentColor: AppColors.secondary,
                 showViewAll: true,
               ),
               ProductSection(

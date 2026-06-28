@@ -6,6 +6,7 @@ import 'package:my_first_app/data/models/category_item.dart';
 import 'package:my_first_app/data/models/product.dart';
 import 'package:my_first_app/features/product/widgets/product_grid_tile.dart';
 import 'package:my_first_app/shared/utils/cart_snackbar.dart';
+import 'package:my_first_app/shared/widgets/category_image.dart';
 
 class CategoryProductsPage extends StatefulWidget {
   const CategoryProductsPage({super.key, required this.category});
@@ -92,11 +93,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            widget.category.icon,
-                            size: 64,
-                            color: AppColors.textMuted,
-                          ),
+                          CategoryImage(category: widget.category, size: 72),
                           const SizedBox(height: 16),
                           Text(
                             'No products yet',

@@ -3,6 +3,7 @@ import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/features/auth/widgets/auth_shared_widgets.dart';
 import 'package:my_first_app/features/dashboard/widgets/dashboard_form_field.dart';
+import 'package:my_first_app/shared/widgets/customer_profile_avatar.dart';
 
 class ProfileUpdatePage extends StatefulWidget {
   const ProfileUpdatePage({super.key});
@@ -115,20 +116,10 @@ class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
                   Center(
                     child: Stack(
                       children: [
-                        CircleAvatar(
+                        CustomerProfileAvatar(
+                          imageUrl: controller.userProfileImageUrl,
+                          name: controller.userName ?? 'User',
                           radius: 48,
-                          backgroundColor:
-                              AppColors.primary.withValues(alpha: 0.15),
-                          child: Text(
-                            (controller.userName?.isNotEmpty ?? false)
-                                ? controller.userName![0].toUpperCase()
-                                : 'U',
-                            style: const TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primary,
-                            ),
-                          ),
                         ),
                         Positioned(
                           bottom: 0,

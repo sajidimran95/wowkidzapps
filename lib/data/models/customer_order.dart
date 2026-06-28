@@ -1,6 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 
+enum OrderPaymentStatus {
+  paid,
+  unpaid,
+}
+
+extension OrderPaymentStatusX on OrderPaymentStatus {
+  String get label => switch (this) {
+        OrderPaymentStatus.paid => 'Paid',
+        OrderPaymentStatus.unpaid => 'Not Paid',
+      };
+
+  Color get color => switch (this) {
+        OrderPaymentStatus.paid => AppColors.success,
+        OrderPaymentStatus.unpaid => AppColors.discount,
+      };
+}
+
 enum OrderStatus {
   confirmed,
   processing,
@@ -91,6 +108,7 @@ class CustomerOrder {
     required this.statusHistory,
     this.address = 'Dhaka, Bangladesh',
     this.paymentMethod = 'Cash on Delivery',
+    this.paymentStatus = OrderPaymentStatus.paid,
   });
 
   final String id;
@@ -102,6 +120,24 @@ class CustomerOrder {
   final List<OrderStatusEvent> statusHistory;
   final String address;
   final String paymentMethod;
+  final OrderPaymentStatus paymentStatus;
+
+  CustomerOrder copyWith({
+    OrderPaymentStatus? paymentStatus,
+  }) {
+    return CustomerOrder(
+      id: id,
+      dateLabel: dateLabel,
+      total: total,
+      status: status,
+      itemCount: itemCount,
+      itemsSummary: itemsSummary,
+      statusHistory: statusHistory,
+      address: address,
+      paymentMethod: paymentMethod,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+    );
+  }
 
   DateTime? timestampFor(OrderStatus status) {
     for (final event in statusHistory) {
