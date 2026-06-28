@@ -415,6 +415,18 @@ abstract final class MockData {
     return products.values.toList();
   }
 
+  static List<Product> get allNewArrivals => [
+        ...newArrivals,
+        ...moreProducts.where(
+          (p) =>
+              p.category == 'Boys Clothing' ||
+              p.category == 'Girls Clothing' ||
+              p.category == 'Footwear',
+        ),
+      ];
+
+  static List<Product> get allRecommended => allProducts;
+
   static Product? productById(String id) {
     for (final product in allProducts) {
       if (product.id == id) return product;

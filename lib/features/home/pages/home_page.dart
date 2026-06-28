@@ -34,11 +34,13 @@ class HomePage extends StatelessWidget {
               ProductSection(
                 title: 'New Arrival',
                 products: MockData.newArrivals,
+                viewAllProducts: MockData.allNewArrivals,
                 showViewAll: true,
               ),
               ProductSection(
                 title: 'Recommended',
                 products: MockData.recommended,
+                viewAllProducts: MockData.allRecommended,
                 showViewAll: true,
               ),
               const NewsletterBanner(),

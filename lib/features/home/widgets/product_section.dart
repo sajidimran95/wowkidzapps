@@ -3,6 +3,7 @@ import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/models/product.dart';
 import 'package:my_first_app/shared/utils/cart_snackbar.dart';
+import 'package:my_first_app/features/home/pages/product_collection_page.dart';
 import 'package:my_first_app/features/home/widgets/product_card.dart';
 import 'package:my_first_app/shared/widgets/section_header.dart';
 
@@ -14,6 +15,7 @@ class ProductSection extends StatelessWidget {
     this.subtitle,
     this.showViewAll = false,
     this.isFlashDeal = false,
+    this.viewAllProducts,
   });
 
   final String title;
@@ -21,6 +23,7 @@ class ProductSection extends StatelessWidget {
   final List<Product> products;
   final bool showViewAll;
   final bool isFlashDeal;
+  final List<Product>? viewAllProducts;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +34,20 @@ class ProductSection extends StatelessWidget {
           title: title,
           subtitle: subtitle,
           trailing: isFlashDeal ? const _EndsSoonChip() : null,
-          onViewAll: showViewAll ? () {} : null,
+          onViewAll: showViewAll
+              ? () {
+                  final items = viewAllProducts ?? products;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProductCollectionPage(
+                        title: title,
+                        products: items,
+                      ),
+                    ),
+                  );
+                }
+              : null,
         ),
         SizedBox(
           height: 370,
