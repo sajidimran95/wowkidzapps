@@ -13,6 +13,20 @@ class WowKidzApi {
 
   final _client = ApiClient.instance;
 
+  Future<Map<String, dynamic>> getMobileStatus() async {
+    final json = await _client.get(ApiConfig.mobileStatus);
+    return _client.asMap(json);
+  }
+
+  Future<bool> isMobileApiEnabled() async {
+    try {
+      final status = await getMobileStatus();
+      return readBool(status['mobile_api_enabled'], false);
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>> getHome() async {
     final json = await _client.get(ApiConfig.home);
     return _client.asMap(json);

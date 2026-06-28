@@ -5,7 +5,8 @@
 abstract final class ApiConfig {
   static const baseUrl = 'https://wowkidzbd.com/api';
 
-  // Catalog
+  // Status (always available — app checks before loading data)
+  static const mobileStatus = '/mobile/status';
   static const home = '/home';
   static const settings = '/settings';
   static const categories = '/categories';

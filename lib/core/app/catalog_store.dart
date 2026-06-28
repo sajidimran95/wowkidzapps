@@ -15,6 +15,7 @@ class CatalogStore extends ChangeNotifier {
 
   bool isLoading = false;
   bool isRefreshing = false;
+  bool apiEnabled = false;
   String? error;
 
   String appName = 'WowKidz';
@@ -72,8 +73,31 @@ class CatalogStore extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final status = await _api.getMobileStatus();
+      apiEnabled = readBool(status['mobile_api_enabled'], false);
+      appName = readString(status['app_name'], appName);
+      tagline = readString(status['tagline'], tagline);
+
+      if (!apiEnabled) {
+        error =
+            'Mobile App API is disabled. Enable it from Admin → Manage Site → Mobile App API.';
+        isLoading = false;
+        isRefreshing = false;
+        notifyListeners();
+        return;
+      }
+
       await _loadFromHomeEndpoint();
     } on ApiException catch (e) {
+      if (e.statusCode == 403 &&
+          e.message.toLowerCase().contains('disabled')) {
+        apiEnabled = false;
+        error = e.message;
+        isLoading = false;
+        isRefreshing = false;
+        notifyListeners();
+        return;
+      }
       try {
         await _loadFromSeparateEndpoints();
       } on ApiException catch (e2) {
