@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
+import 'package:my_first_app/shared/widgets/store_logo.dart';
 
 enum AuthMethod { mobile, email }
 
@@ -33,33 +34,33 @@ class AuthHeader extends StatelessWidget {
               icon: const Icon(Icons.arrow_back, color: Colors.white),
             ),
           ),
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(
-              Icons.child_care,
-              size: 40,
-              color: AppColors.primary,
-            ),
+          StoreLogo(
+            size: 72,
+            borderRadius: 20,
+            fallbackIconColor: AppColors.primary,
+            padding: const EdgeInsets.all(10),
           ),
           const SizedBox(height: 14),
-          Text(
-            catalog.appName,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
+          ListenableBuilder(
+            listenable: catalog,
+            builder: (context, _) => Column(
+              children: [
+                Text(
+                  catalog.appName,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            catalog.tagline,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.85),
+                const SizedBox(height: 4),
+                Text(
+                  catalog.tagline,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
                 ),
+              ],
+            ),
           ),
         ],
       ),

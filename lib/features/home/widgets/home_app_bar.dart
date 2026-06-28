@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/features/home/widgets/search_bar_widget.dart';
+import 'package:my_first_app/shared/widgets/store_logo.dart';
 
 class HomeAppBar extends StatefulWidget {
   const HomeAppBar({super.key});
@@ -55,49 +56,46 @@ class _HomeAppBarState extends State<HomeAppBar> {
                 focusNode: _searchFocus,
                 onSubmitted: (_) => _closeSearch(),
               )
-            : Row(
-                key: const ValueKey('logo'),
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.secondary],
+            : ListenableBuilder(
+                listenable: catalog,
+                builder: (context, _) {
+                  return Row(
+                    key: const ValueKey('logo'),
+                    children: [
+                      const StoreLogo(size: 36, borderRadius: 10),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              catalog.appName,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.primary,
+                                  ),
+                            ),
+                            Text(
+                              catalog.tagline,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: AppColors.textMuted,
+                                    fontSize: 10,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.child_care,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          catalog.appName,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
-                              ),
-                        ),
-                        Text(
-                          catalog.tagline,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: AppColors.textMuted,
-                                fontSize: 10,
-                              ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                },
               ),
       ),
       actions: [

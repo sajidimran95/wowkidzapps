@@ -20,6 +20,8 @@ class CatalogStore extends ChangeNotifier {
 
   String appName = 'WowKidz';
   String tagline = 'Shop Smart, Live Better';
+  String? logoUrl;
+  String? faviconUrl;
 
   List<FeatureItem> features = [];
   List<CategoryItem> categories = [];
@@ -75,8 +77,7 @@ class CatalogStore extends ChangeNotifier {
     try {
       final status = await _api.getMobileStatus();
       apiEnabled = readBool(status['mobile_api_enabled'], false);
-      appName = readString(status['app_name'], appName);
-      tagline = readString(status['tagline'], tagline);
+      _applyBranding(status);
 
       if (!apiEnabled) {
         error =
@@ -177,8 +178,15 @@ class CatalogStore extends ChangeNotifier {
   }
 
   void _applySettings(Map<String, dynamic> map) {
+    _applyBranding(map);
+  }
+
+  void _applyBranding(Map<String, dynamic> map) {
     appName = readString(map['app_name'] ?? map['name'], appName);
     tagline = readString(map['tagline'] ?? map['slogan'], tagline);
+    logoUrl = readNullableString(map['logo_url'] ?? map['logo']) ?? logoUrl;
+    faviconUrl =
+        readNullableString(map['favicon_url'] ?? map['favicon']) ?? faviconUrl;
   }
 
   void _applyFeatures(dynamic raw) {
