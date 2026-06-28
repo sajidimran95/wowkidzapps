@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/mock/mock_data.dart';
-import 'package:my_first_app/features/auth/widgets/smiling_kids_animation.dart';
+import 'package:my_first_app/shared/widgets/doll_girl_character.dart';
 import 'package:my_first_app/features/dashboard/pages/customer_dashboard_page.dart';
 
 class CustomerLoginWelcomePage extends StatefulWidget {
@@ -72,7 +72,7 @@ class _CustomerLoginWelcomePageState extends State<CustomerLoginWelcomePage>
           child: Column(
             children: [
               const Spacer(flex: 2),
-              const SmilingKidsAnimation(size: 240),
+              const DollGirlCharacter(),
               const SizedBox(height: 28),
               FadeTransition(
                 opacity: textOpacity,
