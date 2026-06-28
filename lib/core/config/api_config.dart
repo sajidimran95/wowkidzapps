@@ -1,9 +1,19 @@
+import 'package:flutter/foundation.dart';
+
 /// WowKidz mobile API configuration.
 ///
-/// Base URL: https://wowkidzbd.com/api
-/// Backend must expose these routes (Laravel JSON responses).
+/// WhatsApp number comes from the same place as the website:
+/// Admin → Setting → System → **WhatsApp number**
+/// (`/admin/setting/system` on your store).
 abstract final class ApiConfig {
-  static const baseUrl = 'https://wowkidzbd.com/api';
+  /// Live store (release APK / production).
+  static const productionBaseUrl = 'https://wowkidzbd.com/api';
+
+  /// Laragon local store — same DB as https://www.wowkidz.test
+  static const localBaseUrl = 'https://www.wowkidz.test/api';
+
+  /// Debug builds (`flutter run`) use Laragon; release APK uses production.
+  static String get baseUrl => kDebugMode ? localBaseUrl : productionBaseUrl;
 
   // Status (always available — app checks before loading data)
   static const mobileStatus = '/mobile/status';

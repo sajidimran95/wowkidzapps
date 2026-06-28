@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
+import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/features/cart/pages/cart_page.dart';
 import 'package:my_first_app/features/category/pages/category_page.dart';
 import 'package:my_first_app/features/home/pages/home_page.dart';
 import 'package:my_first_app/features/auth/pages/login_page.dart';
+import 'package:my_first_app/features/dashboard/pages/addresses_page.dart';
 import 'package:my_first_app/features/dashboard/pages/customer_dashboard_page.dart';
-import 'package:my_first_app/features/preview/design_preview_page.dart';
+import 'package:my_first_app/features/dashboard/pages/help_support_page.dart';
+import 'package:my_first_app/shared/widgets/whatsapp_fab.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -17,11 +20,12 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   final _controller = AppController.instance;
+  final _catalog = CatalogStore.instance;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _controller,
+      listenable: Listenable.merge([_controller, _catalog]),
       builder: (context, _) {
         return Scaffold(
           body: IndexedStack(
@@ -59,13 +63,7 @@ class _MainShellState extends State<MainShell> {
               ),
             ],
           ),
-          floatingActionButton: _controller.selectedTab == 0
-              ? FloatingActionButton(
-                  onPressed: () {},
-                  backgroundColor: const Color(0xFF25D366),
-                  child: const Icon(Icons.chat, color: Colors.white),
-                )
-              : null,
+          floatingActionButton: const WhatsAppFab(),
         );
       },
     );
@@ -249,42 +247,95 @@ class _AccountPage extends StatelessWidget {
                   ],
                 ),
               ),
-          const SizedBox(height: 16),
-          Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            color: AppColors.primary.withValues(alpha: 0.08),
-            child: ListTile(
-              leading: const Icon(Icons.palette_outlined, color: AppColors.primary),
-              title: const Text(
-                'All Pages Preview',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              const SizedBox(height: 16),
+              _MenuTile(
+                icon: Icons.receipt_long_outlined,
+                title: 'My Orders',
+                onTap: () => _openDashboard(context, controller, 1),
               ),
-              subtitle: const Text('Check every screen design (static demo)'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const DesignPreviewPage()),
+              _MenuTile(
+                icon: Icons.favorite_border,
+                title: 'Wishlist',
+                onTap: () => _openDashboard(context, controller, 2),
               ),
-            ),
-          ),
-          _MenuTile(icon: Icons.receipt_long_outlined, title: 'My Orders'),
-          _MenuTile(icon: Icons.favorite_border, title: 'Wishlist'),
-          _MenuTile(icon: Icons.location_on_outlined, title: 'Addresses'),
-          _MenuTile(icon: Icons.help_outline, title: 'Help & Support'),
-          _MenuTile(icon: Icons.privacy_tip_outlined, title: 'Privacy Policy'),
+              _MenuTile(
+                icon: Icons.location_on_outlined,
+                title: 'Addresses',
+                onTap: () => _openSignedIn(
+                  context,
+                  controller,
+                  const AddressesPage(),
+                ),
+              ),
+              _MenuTile(
+                icon: Icons.help_outline,
+                title: 'Help & Support',
+                onTap: () => _openSignedIn(
+                  context,
+                  controller,
+                  const HelpSupportPage(),
+                ),
+              ),
+              _MenuTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Privacy Policy',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Visit wowkidzbd.com for our privacy policy.'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         );
       },
     );
   }
+
+  void _openDashboard(
+    BuildContext context,
+    AppController controller,
+    int tab,
+  ) {
+    _openSignedIn(
+      context,
+      controller,
+      CustomerDashboardPage(initialTab: tab),
+    );
+  }
+
+  void _openSignedIn(
+    BuildContext context,
+    AppController controller,
+    Widget page,
+  ) {
+    if (!controller.isLoggedIn) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => page),
+    );
+  }
 }
 
 class _MenuTile extends StatelessWidget {
-  const _MenuTile({required this.icon, required this.title});
+  const _MenuTile({
+    required this.icon,
+    required this.title,
+    this.onTap,
+  });
 
   final IconData icon;
   final String title;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -294,7 +345,7 @@ class _MenuTile extends StatelessWidget {
         leading: Icon(icon, color: AppColors.primary),
         title: Text(title),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }

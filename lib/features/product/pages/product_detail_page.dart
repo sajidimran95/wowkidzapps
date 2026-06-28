@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
+import 'package:my_first_app/core/app/catalog_store.dart';
+import 'package:my_first_app/core/services/whatsapp_launcher.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/models/product.dart';
 import 'package:my_first_app/shared/utils/cart_snackbar.dart';
@@ -52,8 +54,25 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     AppController.instance.goToCart(context);
   }
 
+  void _orderOnWhatsApp() {
+    final config = CatalogStore.instance.whatsapp;
+    if (!config.enabled) return;
+
+    WhatsAppLauncher.openProductOrder(
+      config: config,
+      productName: product.name,
+      priceText: product.formattedSalePrice,
+      size: _selectedSize,
+      quantity: _quantity,
+      sku: product.sku.isNotEmpty ? product.sku : null,
+      productUrl: product.productUrl.isNotEmpty ? product.productUrl : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final whatsapp = CatalogStore.instance.whatsapp;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
@@ -260,28 +279,49 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ],
         ),
         child: SafeArea(
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: product.inStock ? _addToCart : null,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: AppColors.primary),
-                    foregroundColor: AppColors.primary,
+              if (whatsapp.enabled) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _orderOnWhatsApp,
+                    icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
+                    label: const Text('Order on WhatsApp'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: const BorderSide(color: Color(0xFF25D366)),
+                      foregroundColor: const Color(0xFF25D366),
+                    ),
                   ),
-                  child: const Text('Add to Cart'),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: product.inStock ? _buyNow : null,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                const SizedBox(height: 10),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: product.inStock ? _addToCart : null,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: AppColors.primary),
+                        foregroundColor: AppColors.primary,
+                      ),
+                      child: const Text('Add to Cart'),
+                    ),
                   ),
-                  child: const Text('Buy Now'),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: product.inStock ? _buyNow : null,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('Buy Now'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

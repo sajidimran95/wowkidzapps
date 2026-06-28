@@ -24,9 +24,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   void initState() {
     super.initState();
-    _nameController.text = 'Demo User';
-    _phoneController.text = '01712345678';
-    _addressController.text = '143/K, West Monipur, Mirpur, Dhaka';
+    _prefillShipping();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -44,6 +42,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _addressController.dispose();
     _cityController.dispose();
     super.dispose();
+  }
+
+  void _prefillShipping() {
+    final controller = AppController.instance;
+    final address = controller.addresses
+            .where((a) => a.isDefault)
+            .firstOrNull ??
+        controller.addresses.firstOrNull;
+
+    if (address != null) {
+      _nameController.text = address.fullName;
+      _phoneController.text = address.phone;
+      _addressController.text = address.addressLine;
+      _cityController.text = address.city;
+      return;
+    }
+
+    if (controller.isLoggedIn) {
+      _nameController.text = controller.userName ?? '';
+      _phoneController.text = controller.userPhone ?? '';
+    }
   }
 
   Future<void> _placeOrder(AppController controller) async {

@@ -198,7 +198,7 @@ class _PaymentGatewayPageState extends State<PaymentGatewayPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Demo: use any PIN except 0000. Payment connects via mock API.',
+            'Enter your payment PIN to confirm.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: AppColors.textMuted,

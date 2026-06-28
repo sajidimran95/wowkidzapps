@@ -10,6 +10,7 @@ import 'package:my_first_app/data/models/feature_item.dart';
 import 'package:my_first_app/data/models/newsletter_block.dart';
 import 'package:my_first_app/data/models/product.dart';
 import 'package:my_first_app/data/models/promo_banner.dart';
+import 'package:my_first_app/data/models/whatsapp_chat_config.dart';
 
 class CatalogStore extends ChangeNotifier {
   CatalogStore._();
@@ -46,6 +47,7 @@ class CatalogStore extends ChangeNotifier {
     details:
         'Subscribe to our newsletter for early discount offers, latest news & promos.',
   );
+  WhatsAppChatConfig whatsapp = const WhatsAppChatConfig();
 
   String flashDealTitle = 'Flash Deal';
   String hotCollectionTitle = 'Hot Collection';
@@ -100,6 +102,7 @@ class CatalogStore extends ChangeNotifier {
       final status = await _api.getMobileStatus();
       apiEnabled = readBool(status['mobile_api_enabled'], false);
       _applyBranding(status);
+      _applyWhatsapp(status['whatsapp']);
 
       if (!apiEnabled) {
         error =
@@ -149,6 +152,7 @@ class CatalogStore extends ChangeNotifier {
     _applyCategories(map['categories']);
     _applySections(map['sections'] ?? map);
     _applyPromotions(map);
+    _applyWhatsapp(map['whatsapp']);
     notifyListeners();
   }
 
@@ -203,6 +207,13 @@ class CatalogStore extends ChangeNotifier {
 
   void _applySettings(Map<String, dynamic> map) {
     _applyBranding(map);
+    _applyWhatsapp(map['whatsapp']);
+  }
+
+  void _applyWhatsapp(dynamic raw) {
+    if (raw is Map) {
+      whatsapp = WhatsAppChatConfig.fromJson(asJsonMap(raw));
+    }
   }
 
   void _applyBranding(Map<String, dynamic> map) {

@@ -62,7 +62,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
                   return Row(
                     key: const ValueKey('logo'),
                     children: [
-                      const StoreLogo(size: 36, borderRadius: 10),
+                      const StoreLogo(size: 40, borderRadius: 10, fit: BoxFit.contain),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(

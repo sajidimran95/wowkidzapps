@@ -14,6 +14,9 @@ class Product {
         'Premium quality kids wear made with soft, breathable fabric. Perfect for parties and everyday comfort.',
     this.sizes = const ['2-3Y', '4-5Y', '6-7Y', '8-9Y', '10-11Y'],
     this.imageUrls = const [],
+    this.slug = '',
+    this.productUrl = '',
+    this.sku = '',
   });
 
   final String id;
@@ -27,6 +30,9 @@ class Product {
   final String description;
   final List<String> sizes;
   final List<String> imageUrls;
+  final String slug;
+  final String productUrl;
+  final String sku;
 
   List<String> get allImages =>
       imageUrls.isNotEmpty ? imageUrls : [imageUrl];
@@ -101,6 +107,9 @@ class Product {
           ? const ['2-3Y', '4-5Y', '6-7Y', '8-9Y', '10-11Y']
           : sizes,
       imageUrls: images,
+      slug: readString(json['slug']),
+      productUrl: readString(json['product_url'] ?? json['productUrl']),
+      sku: readString(json['sku']),
     );
   }
 }

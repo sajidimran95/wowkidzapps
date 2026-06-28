@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_first_app/core/app/catalog_store.dart';
+import 'package:my_first_app/core/services/whatsapp_launcher.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/features/dashboard/pages/addresses_page.dart';
 import 'package:my_first_app/features/dashboard/pages/help_support_page.dart';
@@ -75,48 +77,65 @@ class DashboardMenuTab extends StatelessWidget {
           title: 'Privacy Policy',
           subtitle: 'How we protect your data',
           color: AppColors.textMuted,
-          onTap: () => _showInfo(context, 'Privacy Policy (static demo)'),
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Visit wowkidzbd.com for our privacy policy.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
         ),
         const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.support_agent, color: AppColors.primary),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Need help?',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      'Call 09678-123456 or WhatsApp us',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+        ListenableBuilder(
+          listenable: CatalogStore.instance,
+          builder: (context, _) {
+            final wa = CatalogStore.instance.whatsapp;
+            final contact = wa.displayContact;
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
               ),
-            ],
-          ),
+              child: Row(
+                children: [
+                  const Icon(Icons.support_agent, color: AppColors.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Need help?',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          contact.isNotEmpty
+                              ? 'WhatsApp us at $contact'
+                              : 'Open a support ticket above',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (wa.enabled)
+                    IconButton(
+                      onPressed: () => WhatsAppLauncher.openChat(wa),
+                      icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
+                      tooltip: 'Chat on WhatsApp',
+                    ),
+                ],
+              ),
+            );
+          },
         ),
       ],
-    );
-  }
-
-  void _showInfo(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 }
