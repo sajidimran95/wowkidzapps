@@ -2,11 +2,17 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:my_first_app/data/mock/mock_data.dart';
 import 'package:my_first_app/data/models/promo_banner.dart';
 
 class PromoBannerCarousel extends StatefulWidget {
-  const PromoBannerCarousel({super.key});
+  const PromoBannerCarousel({
+    super.key,
+    required this.banners,
+    this.sideBanners = const [],
+  });
+
+  final List<PromoBanner> banners;
+  final List<PromoBanner> sideBanners;
 
   @override
   State<PromoBannerCarousel> createState() => _PromoBannerCarouselState();
@@ -20,9 +26,23 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
   @override
   void initState() {
     super.initState();
+    _startTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant PromoBannerCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.banners.length != widget.banners.length) {
+      _timer?.cancel();
+      _startTimer();
+    }
+  }
+
+  void _startTimer() {
+    if (widget.banners.length < 2) return;
     _timer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted || !_controller.hasClients) return;
-      final next = (_currentPage + 1) % MockData.sliderBanners.length;
+      if (!mounted || !_controller.hasClients || widget.banners.isEmpty) return;
+      final next = (_currentPage + 1) % widget.banners.length;
       _controller.animateToPage(
         next,
         duration: const Duration(milliseconds: 400),
@@ -40,53 +60,60 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.banners.isEmpty && widget.sideBanners.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Column(
         children: [
-          SizedBox(
-            height: 168,
-            child: PageView.builder(
-              controller: _controller,
-              onPageChanged: (index) => setState(() => _currentPage = index),
-              itemCount: MockData.sliderBanners.length,
-              itemBuilder: (_, index) => _SliderCard(
-                banner: MockData.sliderBanners[index],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              MockData.sliderBanners.length,
-              (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: _currentPage == index ? 20 : 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: _currentPage == index
-                      ? MockData.sliderBanners[index].gradient.first
-                      : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(3),
+          if (widget.banners.isNotEmpty) ...[
+            SizedBox(
+              height: 168,
+              child: PageView.builder(
+                controller: _controller,
+                onPageChanged: (index) => setState(() => _currentPage = index),
+                itemCount: widget.banners.length,
+                itemBuilder: (_, index) => _SliderCard(
+                  banner: widget.banners[index],
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              for (var i = 0; i < MockData.homeSideBanners.length; i++) ...[
-                if (i > 0) const SizedBox(width: 10),
-                Expanded(
-                  child: _SideBannerCard(
-                    banner: MockData.homeSideBanners[i],
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                widget.banners.length,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: _currentPage == index ? 20 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: _currentPage == index
+                        ? widget.banners[index].gradient.first
+                        : Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(3),
                   ),
                 ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (widget.sideBanners.isNotEmpty)
+            Row(
+              children: [
+                for (var i = 0; i < widget.sideBanners.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 10),
+                  Expanded(
+                    child: _SideBannerCard(
+                      banner: widget.sideBanners[i],
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
+            ),
         ],
       ),
     );
@@ -227,7 +254,7 @@ class _BannerImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (banner.imageUrl != null) {
+    if (banner.imageUrl != null && banner.imageUrl!.isNotEmpty) {
       return CachedNetworkImage(
         imageUrl: banner.imageUrl!,
         fit: BoxFit.cover,

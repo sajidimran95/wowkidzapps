@@ -1,3 +1,5 @@
+import 'package:my_first_app/core/network/json_utils.dart';
+
 class PaymentSession {
   const PaymentSession({
     required this.sessionId,
@@ -12,6 +14,16 @@ class PaymentSession {
   final double amount;
   final String gateway;
   final String merchantName;
+
+  factory PaymentSession.fromJson(Map<String, dynamic> json) {
+    return PaymentSession(
+      sessionId: readString(json['session_id'] ?? json['sessionId']),
+      orderId: readString(json['order_id'] ?? json['orderId']),
+      amount: readDouble(json['amount']),
+      gateway: readString(json['gateway'] ?? json['payment_method'], 'Online'),
+      merchantName: readString(json['merchant_name'] ?? json['merchant'], 'WowKidz'),
+    );
+  }
 }
 
 class PaymentResult {

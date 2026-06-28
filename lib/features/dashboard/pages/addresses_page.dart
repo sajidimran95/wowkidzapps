@@ -66,9 +66,9 @@ class AddressesPage extends StatelessWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
-            onPressed: () {
-              AppController.instance.deleteAddress(id);
-              Navigator.pop(ctx);
+            onPressed: () async {
+              await AppController.instance.deleteAddress(id);
+              if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Delete', style: TextStyle(color: AppColors.discount)),
           ),

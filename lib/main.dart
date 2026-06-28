@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
+import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/theme/app_theme.dart';
 import 'package:my_first_app/features/shell/main_shell.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  CatalogStore.instance.loadHome();
+  AppController.instance.restoreSession();
   runApp(const WowKidzApp());
 }
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
-import 'package:my_first_app/data/mock/customer_orders_mock.dart';
 import 'package:my_first_app/data/models/customer_order.dart';
 import 'package:my_first_app/features/dashboard/widgets/dashboard_order_tile.dart';
 
@@ -52,9 +51,10 @@ class _OrdersTabState extends State<OrdersTab>
   List<CustomerOrder> _ordersForFilter(
     ({String label, bool runningOnly, OrderStatus? status}) filter,
   ) {
-    if (filter.runningOnly) return CustomerOrdersMock.running;
-    if (filter.status == null) return CustomerOrdersMock.orders;
-    return CustomerOrdersMock.byStatus(filter.status!);
+    return AppController.instance.ordersForFilter(
+      runningOnly: filter.runningOnly,
+      status: filter.status,
+    );
   }
 
   @override

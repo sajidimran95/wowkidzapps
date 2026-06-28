@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
-import 'package:my_first_app/data/mock/mock_data.dart';
 import 'package:my_first_app/features/home/widgets/search_bar_widget.dart';
 
 class HomeAppBar extends StatefulWidget {
@@ -37,6 +37,8 @@ class _HomeAppBarState extends State<HomeAppBar> {
 
   @override
   Widget build(BuildContext context) {
+    final catalog = CatalogStore.instance;
+
     return SliverAppBar(
       floating: true,
       snap: true,
@@ -77,14 +79,14 @@ class _HomeAppBarState extends State<HomeAppBar> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          MockData.appName,
+                          catalog.appName,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.primary,
                               ),
                         ),
                         Text(
-                          MockData.tagline,
+                          catalog.tagline,
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                 color: AppColors.textMuted,
                                 fontSize: 10,

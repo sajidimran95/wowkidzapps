@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
-import 'package:my_first_app/data/mock/mock_data.dart';
 import 'package:my_first_app/data/models/category_item.dart';
 import 'package:my_first_app/features/category/pages/category_products_page.dart';
 import 'package:my_first_app/shared/widgets/category_image.dart';
 import 'package:my_first_app/shared/widgets/section_header.dart';
 
 class CategoryGrid extends StatelessWidget {
-  const CategoryGrid({super.key});
+  const CategoryGrid({super.key, required this.categories});
+
+  final List<CategoryItem> categories;
 
   @override
   Widget build(BuildContext context) {
+    if (categories.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -20,10 +23,10 @@ class CategoryGrid extends StatelessWidget {
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
-            itemCount: MockData.categories.length,
+            itemCount: categories.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (_, index) {
-              final category = MockData.categories[index];
+              final category = categories[index];
               return _CategoryCard(category: category);
             },
           ),

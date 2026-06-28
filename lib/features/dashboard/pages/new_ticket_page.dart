@@ -79,19 +79,19 @@ class _NewTicketPageState extends State<NewTicketPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
-    await Future<void>.delayed(const Duration(milliseconds: 800));
 
-    AppController.instance.addSupportTicket(
+    final error = await AppController.instance.addSupportTicket(
       subject: _subjectController.text.trim(),
       message: _messageController.text.trim(),
       attachmentName: _attachmentName,
     );
 
     if (!mounted) return;
+    setState(() => _isSubmitting = false);
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Ticket submitted successfully'),
+      SnackBar(
+        content: Text(error ?? 'Ticket submitted successfully'),
         behavior: SnackBarBehavior.floating,
       ),
     );

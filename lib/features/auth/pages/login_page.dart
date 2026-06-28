@@ -31,20 +31,22 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future<void>.delayed(const Duration(seconds: 1));
-
-    if (!mounted) return;
 
     final contact = parseContact(_contactController.text.trim());
-    AppController.instance.login(
-      name: 'WowKidz Customer',
-      phone: contact.phone,
-      email: contact.email,
-      role: 'Customer',
+    final error = await AppController.instance.login(
+      contact: contact.phone ?? contact.email ?? _contactController.text.trim(),
       password: _passwordController.text,
     );
 
     if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+      return;
+    }
 
     Navigator.pushReplacement(
       context,

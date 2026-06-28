@@ -1,3 +1,5 @@
+import 'package:my_first_app/core/network/json_utils.dart';
+
 class SavedAddress {
   const SavedAddress({
     required this.id,
@@ -42,4 +44,27 @@ class SavedAddress {
       isDefault: isDefault ?? this.isDefault,
     );
   }
+
+  factory SavedAddress.fromJson(Map<String, dynamic> json) {
+    return SavedAddress(
+      id: readString(json['id']),
+      label: readString(json['label'] ?? json['title'], 'Home'),
+      fullName: readString(json['full_name'] ?? json['name']),
+      phone: readString(json['phone'] ?? json['mobile']),
+      addressLine: readString(json['address_line'] ?? json['address']),
+      city: readString(json['city']),
+      district: readString(json['district'] ?? json['area']),
+      isDefault: readBool(json['is_default'] ?? json['default'], false),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'label': label,
+        'full_name': fullName,
+        'phone': phone,
+        'address_line': addressLine,
+        'city': city,
+        'district': district,
+        'is_default': isDefault,
+      };
 }

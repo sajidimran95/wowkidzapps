@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_first_app/core/network/json_utils.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 
 enum OrderPaymentStatus {
@@ -145,4 +146,57 @@ class CustomerOrder {
     }
     return null;
   }
+
+  factory CustomerOrder.fromJson(Map<String, dynamic> json) {
+    final status = _parseOrderStatus(readString(json['status'], 'confirmed'));
+    final history = asJsonList(json['status_history'] ?? json['timeline'])
+        .map((e) {
+          final map = asJsonMap(e);
+          return OrderStatusEvent(
+            status: _parseOrderStatus(readString(map['status'])),
+            at: DateTime.tryParse(readString(map['at'] ?? map['date'])) ??
+                DateTime.now(),
+          );
+        })
+        .toList();
+
+    final paymentRaw =
+        readString(json['payment_status'] ?? json['paymentStatus'], 'paid');
+    final paymentStatus = paymentRaw.toLowerCase().contains('unpaid') ||
+            paymentRaw.toLowerCase() == 'pending'
+        ? OrderPaymentStatus.unpaid
+        : OrderPaymentStatus.paid;
+
+    return CustomerOrder(
+      id: readString(json['id'] ?? json['order_id'] ?? json['order_number']),
+      dateLabel: readString(
+        json['date_label'] ?? json['date'] ?? json['created_at'],
+        formatOrderStatusDateTime(
+          DateTime.tryParse(readString(json['created_at'])) ?? DateTime.now(),
+        ),
+      ),
+      total: readDouble(json['total'] ?? json['grand_total'] ?? json['amount']),
+      status: status,
+      itemCount: readInt(json['item_count'] ?? json['items_count'], 1),
+      itemsSummary: readString(
+        json['items_summary'] ?? json['summary'] ?? json['items'],
+      ),
+      statusHistory: history.isEmpty
+          ? [OrderStatusEvent(status: status, at: DateTime.now())]
+          : history,
+      address: readString(json['address'] ?? json['shipping_address']),
+      paymentMethod: readString(json['payment_method'] ?? json['paymentMethod']),
+      paymentStatus: paymentStatus,
+    );
+  }
+
+  static OrderStatus _parseOrderStatus(String value) => switch (
+        value.toLowerCase().replaceAll(' ', '_').replaceAll('-', '_')) {
+        'processing' => OrderStatus.processing,
+        'packed' => OrderStatus.packed,
+        'out_for_delivery' || 'shipped' => OrderStatus.outForDelivery,
+        'delivered' => OrderStatus.delivered,
+        'cancelled' || 'canceled' => OrderStatus.cancelled,
+        _ => OrderStatus.confirmed,
+      };
 }

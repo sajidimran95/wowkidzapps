@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
+import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
-import 'package:my_first_app/data/mock/mock_data.dart';
 import 'package:my_first_app/shared/widgets/doll_girl_character.dart';
 import 'package:my_first_app/features/dashboard/pages/customer_dashboard_page.dart';
 
@@ -100,7 +100,7 @@ class _CustomerLoginWelcomePageState extends State<CustomerLoginWelcomePage>
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        MockData.tagline,
+                        CatalogStore.instance.tagline,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Colors.white70,
                             ),

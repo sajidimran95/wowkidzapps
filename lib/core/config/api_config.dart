@@ -1,0 +1,40 @@
+/// WowKidz mobile API configuration.
+///
+/// Base URL: https://wowkidzbd.com/api
+/// Backend must expose these routes (Laravel JSON responses).
+abstract final class ApiConfig {
+  static const baseUrl = 'https://wowkidzbd.com/api';
+
+  // Catalog
+  static const home = '/home';
+  static const settings = '/settings';
+  static const categories = '/categories';
+  static const products = '/products';
+  static const sliders = '/sliders';
+  static const banners = '/banners';
+  static const features = '/features';
+
+  // Auth
+  static const login = '/auth/login';
+  static const register = '/auth/register';
+  static const logout = '/auth/logout';
+  static const profile = '/auth/profile';
+  static const changePassword = '/auth/change-password';
+
+  // Customer
+  static const orders = '/orders';
+  static const addresses = '/addresses';
+  static const wishlist = '/wishlist';
+  static const supportTickets = '/support/tickets';
+
+  // Cart & checkout
+  static const applyPromo = '/cart/apply-promo';
+  static const newsletterSubscribe = '/newsletter/subscribe';
+
+  // Payments
+  static const paymentSession = '/payments/session';
+  static const paymentVerify = '/payments/verify';
+
+  static const connectTimeout = Duration(seconds: 25);
+  static const receiveTimeout = Duration(seconds: 25);
+}

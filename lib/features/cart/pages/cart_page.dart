@@ -24,8 +24,9 @@ class _CartPageState extends State<CartPage> {
     super.dispose();
   }
 
-  void _applyPromo(AppController controller) {
-    final applied = controller.applyPromo(_promoController.text);
+  Future<void> _applyPromo(AppController controller) async {
+    final applied = await controller.applyPromo(_promoController.text);
+    if (!mounted) return;
     setState(() {
       _promoMessage = applied
           ? 'Promo code applied! 5% discount'

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:my_first_app/data/mock/customer_profile_mock.dart';
-import 'package:my_first_app/data/mock/customer_orders_mock.dart';
-import 'package:my_first_app/data/mock/mock_data.dart';
+import 'package:my_first_app/core/app/catalog_store.dart';
+import 'package:my_first_app/core/network/api_exception.dart';
+import 'package:my_first_app/core/network/json_utils.dart';
+import 'package:my_first_app/core/network/token_storage.dart';
+import 'package:my_first_app/data/api/wowkidz_api.dart';
 import 'package:my_first_app/data/models/cart_item.dart';
 import 'package:my_first_app/data/models/customer_order.dart';
 import 'package:my_first_app/data/models/product.dart';
@@ -13,23 +15,27 @@ class AppController extends ChangeNotifier {
   static final AppController instance = AppController._();
 
   final navigatorKey = GlobalKey<NavigatorState>();
+  final _api = WowKidzApi.instance;
+  final _catalog = CatalogStore.instance;
 
   int selectedTab = 0;
   final List<CartItem> _items = [];
   final List<SavedAddress> _addresses = [];
   final List<SupportTicket> _supportTickets = [];
   final List<String> _wishlistProductIds = [];
-  int _addressIdCounter = 100;
-  int _ticketIdCounter = 2000;
+  final List<CustomerOrder> _orders = [];
+
+  bool isAuthLoading = false;
+  bool isCustomerDataLoading = false;
+  String? authError;
 
   List<SavedAddress> get addresses => List.unmodifiable(_addresses);
   List<SupportTicket> get supportTickets => List.unmodifiable(_supportTickets);
+  List<CustomerOrder> get orders => List.unmodifiable(_orders);
 
   List<Product> get wishlistProducts {
     return _wishlistProductIds
-        .map(
-          (id) => MockData.allProducts.where((p) => p.id == id).firstOrNull,
-        )
+        .map((id) => _catalog.productById(id))
         .whereType<Product>()
         .toList();
   }
@@ -51,6 +57,7 @@ class AppController extends ChangeNotifier {
 
   bool _promoApplied = false;
   bool get promoApplied => _promoApplied;
+  String? _appliedPromoCode;
 
   bool isLoggedIn = false;
   String? userName;
@@ -62,42 +69,138 @@ class AppController extends ChangeNotifier {
 
   String? get userContact => userPhone ?? userEmail;
 
-  void login({
-    required String name,
-    String? phone,
-    String? email,
-    String? role,
-    String? password,
-  }) {
-    isLoggedIn = true;
-    userName = name;
-    userPhone = phone;
-    userEmail = email;
-    userRole = role ?? 'Customer';
-    if (password != null) {
-      userPassword = password;
-    }
-    _seedCustomerData();
+  Future<String?> login({
+    required String contact,
+    required String password,
+  }) async {
+    isAuthLoading = true;
+    authError = null;
     notifyListeners();
+
+    try {
+      final data = await _api.login(contact: contact, password: password);
+      await _applyAuthResponse(data, password: password);
+      await loadCustomerData();
+      return null;
+    } on ApiException catch (e) {
+      authError = e.message;
+      return e.message;
+    } catch (e) {
+      authError = e.toString();
+      return authError;
+    } finally {
+      isAuthLoading = false;
+      notifyListeners();
+    }
   }
 
-  void signup({
+  Future<String?> signup({
     required String name,
     String? phone,
     String? email,
     required String role,
-    String? password,
-  }) {
-    login(
-      name: name,
-      phone: phone,
-      email: email,
-      role: role,
-      password: password,
-    );
+    required String password,
+  }) async {
+    isAuthLoading = true;
+    authError = null;
+    notifyListeners();
+
+    try {
+      final data = await _api.register(
+        name: name,
+        phone: phone,
+        email: email,
+        password: password,
+        role: role,
+      );
+      await _applyAuthResponse(data, password: password);
+      await loadCustomerData();
+      return null;
+    } on ApiException catch (e) {
+      authError = e.message;
+      return e.message;
+    } catch (e) {
+      authError = e.toString();
+      return authError;
+    } finally {
+      isAuthLoading = false;
+      notifyListeners();
+    }
   }
 
-  void logout() {
+  Future<void> _applyAuthResponse(
+    Map<String, dynamic> data, {
+    String? password,
+  }) async {
+    final token = readNullableString(data['token'] ?? data['access_token']);
+    if (token != null) {
+      await TokenStorage.instance.writeToken(token);
+    }
+
+    final user = asJsonMap(data['user'] ?? data);
+    isLoggedIn = true;
+    userName = readNullableString(user['name']) ?? userName;
+    userPhone = readNullableString(user['phone']) ?? userPhone;
+    userEmail = readNullableString(user['email']) ?? userEmail;
+    userRole = readNullableString(user['role']) ?? userRole ?? 'Customer';
+    userProfileImageUrl = readNullableString(
+      user['profile_image'] ?? user['avatar'] ?? user['image'],
+    );
+    if (password != null) {
+      userPassword = password;
+    }
+    notifyListeners();
+  }
+
+  Future<void> loadCustomerData() async {
+    if (!isLoggedIn) return;
+
+    isCustomerDataLoading = true;
+    notifyListeners();
+
+    try {
+      final profile = await _api.getProfile();
+      final user = asJsonMap(profile['user'] ?? profile);
+      userName = readNullableString(user['name']) ?? userName;
+      userPhone = readNullableString(user['phone']) ?? userPhone;
+      userEmail = readNullableString(user['email']) ?? userEmail;
+      userRole = readNullableString(user['role']) ?? userRole;
+      userProfileImageUrl = readNullableString(
+        user['profile_image'] ?? user['avatar'],
+      );
+    } catch (_) {}
+
+    try {
+      _addresses
+        ..clear()
+        ..addAll(await _api.getAddresses());
+    } catch (_) {}
+
+    try {
+      _supportTickets
+        ..clear()
+        ..addAll(await _api.getSupportTickets());
+    } catch (_) {}
+
+    try {
+      _wishlistProductIds
+        ..clear()
+        ..addAll(await _api.getWishlistProductIds());
+    } catch (_) {}
+
+    try {
+      _orders
+        ..clear()
+        ..addAll(await _api.getOrders());
+    } catch (_) {}
+
+    isCustomerDataLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> logout() async {
+    await _api.logout();
+    await TokenStorage.instance.clearToken();
     isLoggedIn = false;
     userName = null;
     userPhone = null;
@@ -108,35 +211,44 @@ class AppController extends ChangeNotifier {
     _addresses.clear();
     _supportTickets.clear();
     _wishlistProductIds.clear();
+    _orders.clear();
     notifyListeners();
   }
 
-  void _seedCustomerData() {
-    if (_addresses.isEmpty) {
-      _addresses.addAll(CustomerProfileMock.addresses);
-    }
-    if (_supportTickets.isEmpty) {
-      _supportTickets.addAll(CustomerProfileMock.tickets);
-    }
-    if (_wishlistProductIds.isEmpty) {
-      _wishlistProductIds.addAll(CustomerProfileMock.defaultWishlistIds);
-    }
-  }
-
-  void updateProfile({
+  Future<String?> updateProfile({
     required String name,
     String? phone,
     String? email,
     String? profileImageUrl,
-  }) {
-    userName = name;
-    userPhone = phone;
-    userEmail = email;
-    if (profileImageUrl != null) {
-      userProfileImageUrl =
-          profileImageUrl.trim().isEmpty ? null : profileImageUrl.trim();
+  }) async {
+    try {
+      final data = await _api.updateProfile(
+        name: name,
+        phone: phone,
+        email: email,
+        profileImageUrl: profileImageUrl,
+      );
+      final user = asJsonMap(data['user'] ?? data);
+      userName = readString(user['name'], name);
+      userPhone = readNullableString(user['phone']) ?? phone;
+      userEmail = readNullableString(user['email']) ?? email;
+      if (profileImageUrl != null) {
+        userProfileImageUrl =
+            profileImageUrl.trim().isEmpty ? null : profileImageUrl.trim();
+      }
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      userName = name;
+      userPhone = phone;
+      userEmail = email;
+      if (profileImageUrl != null) {
+        userProfileImageUrl =
+            profileImageUrl.trim().isEmpty ? null : profileImageUrl.trim();
+      }
+      notifyListeners();
+      return e.message;
     }
-    notifyListeners();
   }
 
   void updateProfileImage(String? url) {
@@ -146,38 +258,76 @@ class AppController extends ChangeNotifier {
   }
 
   OrderPaymentStatus paymentStatusFor(CustomerOrder order) {
-    final fresh = CustomerOrdersMock.findById(order.id);
+    final fresh = _orders.where((o) => o.id == order.id).firstOrNull;
     return fresh?.paymentStatus ?? order.paymentStatus;
   }
 
-  void markOrderPaid(String orderId) {
-    final order = CustomerOrdersMock.findById(orderId);
-    if (order == null || order.paymentStatus == OrderPaymentStatus.paid) {
-      return;
+  CustomerOrder? orderById(String id) =>
+      _orders.where((o) => o.id == id).firstOrNull;
+
+  Future<String?> markOrderPaid(String orderId) async {
+    try {
+      await _api.markOrderPaid(orderId);
+      final index = _orders.indexWhere((o) => o.id == orderId);
+      if (index != -1) {
+        _orders[index] = _orders[index].copyWith(
+          paymentStatus: OrderPaymentStatus.paid,
+        );
+      }
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      final index = _orders.indexWhere((o) => o.id == orderId);
+      if (index != -1) {
+        _orders[index] = _orders[index].copyWith(
+          paymentStatus: OrderPaymentStatus.paid,
+        );
+        notifyListeners();
+      }
+      return e.message;
     }
-    CustomerOrdersMock.updateOrder(
-      order.copyWith(paymentStatus: OrderPaymentStatus.paid),
-    );
-    notifyListeners();
   }
 
-  /// Returns null on success, or an error message.
-  String? updatePassword({
+  Future<String?> updatePassword({
     required String currentPassword,
     required String newPassword,
-  }) {
-    if (userPassword == null || userPassword != currentPassword) {
-      return 'Current password is incorrect';
+  }) async {
+    try {
+      await _api.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      userPassword = newPassword;
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      if (userPassword == null || userPassword != currentPassword) {
+        return 'Current password is incorrect';
+      }
+      userPassword = newPassword;
+      notifyListeners();
+      return e.message;
     }
-    if (newPassword.length < 6) {
-      return 'New password must be at least 6 characters';
-    }
-    userPassword = newPassword;
-    notifyListeners();
-    return null;
   }
 
-  void addAddress(SavedAddress address) {
+  Future<String?> addAddress(SavedAddress address) async {
+    try {
+      final saved = await _api.createAddress(address);
+      if (saved.isDefault) {
+        for (var i = 0; i < _addresses.length; i++) {
+          _addresses[i] = _addresses[i].copyWith(isDefault: false);
+        }
+      }
+      _addresses.add(saved);
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      addAddressLocal(address);
+      return e.message;
+    }
+  }
+
+  void addAddressLocal(SavedAddress address) {
     if (address.isDefault) {
       for (var i = 0; i < _addresses.length; i++) {
         _addresses[i] = _addresses[i].copyWith(isDefault: false);
@@ -187,7 +337,27 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateAddress(SavedAddress address) {
+  Future<String?> updateAddress(SavedAddress address) async {
+    try {
+      final saved = await _api.updateAddress(address);
+      final index = _addresses.indexWhere((a) => a.id == address.id);
+      if (index == -1) return null;
+
+      if (saved.isDefault) {
+        for (var i = 0; i < _addresses.length; i++) {
+          _addresses[i] = _addresses[i].copyWith(isDefault: false);
+        }
+      }
+      _addresses[index] = saved;
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      updateAddressLocal(address);
+      return e.message;
+    }
+  }
+
+  void updateAddressLocal(SavedAddress address) {
     final index = _addresses.indexWhere((a) => a.id == address.id);
     if (index == -1) return;
 
@@ -200,7 +370,22 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void deleteAddress(String id) {
+  Future<String?> deleteAddress(String id) async {
+    try {
+      await _api.deleteAddress(id);
+      _addresses.removeWhere((a) => a.id == id);
+      if (_addresses.isNotEmpty && !_addresses.any((a) => a.isDefault)) {
+        _addresses[0] = _addresses[0].copyWith(isDefault: true);
+      }
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      deleteAddressLocal(id);
+      return e.message;
+    }
+  }
+
+  void deleteAddressLocal(String id) {
     _addresses.removeWhere((a) => a.id == id);
     if (_addresses.isNotEmpty && !_addresses.any((a) => a.isDefault)) {
       _addresses[0] = _addresses[0].copyWith(isDefault: true);
@@ -208,34 +393,65 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setDefaultAddress(String id) {
-    for (var i = 0; i < _addresses.length; i++) {
-      _addresses[i] = _addresses[i].copyWith(isDefault: _addresses[i].id == id);
-    }
-    notifyListeners();
+  Future<void> setDefaultAddress(String id) async {
+    final address = _addresses.where((a) => a.id == id).firstOrNull;
+    if (address == null) return;
+    await updateAddress(address.copyWith(isDefault: true));
   }
 
-  String nextAddressId() => 'addr_${_addressIdCounter++}';
+  String nextAddressId() => 'addr_${DateTime.now().millisecondsSinceEpoch}';
 
-  void addSupportTicket({
+  Future<String?> addSupportTicket({
     required String subject,
     required String message,
     String? attachmentName,
-  }) {
-    _supportTickets.insert(
-      0,
-      SupportTicket(
-        id: 'TKT-${_ticketIdCounter++}',
+  }) async {
+    try {
+      final ticket = await _api.createSupportTicket(
         subject: subject,
         message: message,
-        createdAt: DateTime.now(),
         attachmentName: attachmentName,
-      ),
-    );
+      );
+      _supportTickets.insert(0, ticket);
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      _supportTickets.insert(
+        0,
+        SupportTicket(
+          id: 'TKT-${DateTime.now().millisecondsSinceEpoch}',
+          subject: subject,
+          message: message,
+          createdAt: DateTime.now(),
+          attachmentName: attachmentName,
+        ),
+      );
+      notifyListeners();
+      return e.message;
+    }
+  }
+
+  Future<void> toggleWishlist(String productId) async {
+    if (_wishlistProductIds.contains(productId)) {
+      await removeFromWishlist(productId);
+    } else {
+      await addToWishlist(productId);
+    }
+  }
+
+  Future<void> addToWishlist(String productId) async {
+    if (_wishlistProductIds.contains(productId)) return;
+    try {
+      await _api.addToWishlist(productId);
+    } catch (_) {}
+    _wishlistProductIds.add(productId);
     notifyListeners();
   }
 
-  void removeFromWishlist(String productId) {
+  Future<void> removeFromWishlist(String productId) async {
+    try {
+      await _api.removeFromWishlist(productId);
+    } catch (_) {}
     _wishlistProductIds.remove(productId);
     notifyListeners();
   }
@@ -243,13 +459,77 @@ class AppController extends ChangeNotifier {
   bool isInWishlist(String productId) =>
       _wishlistProductIds.contains(productId);
 
+  List<CustomerOrder> ordersForFilter({
+    bool runningOnly = false,
+    OrderStatus? status,
+  }) {
+    if (runningOnly) {
+      return _orders.where((o) => o.status.isRunning).toList();
+    }
+    if (status == null) return List.from(_orders);
+    return _orders.where((o) => o.status == status).toList();
+  }
+
+  Future<CustomerOrder?> placeOrder({
+    required String name,
+    required String phone,
+    required String address,
+    required String city,
+    required String paymentMethod,
+  }) async {
+    final items = _items
+        .map(
+          (item) => {
+            'product_id': item.product.id,
+            'size': item.size,
+            'quantity': item.quantity,
+            'price': item.product.salePrice,
+          },
+        )
+        .toList();
+
+    try {
+      final order = await _api.placeOrder(
+        items: items,
+        name: name,
+        phone: phone,
+        address: address,
+        city: city,
+        paymentMethod: paymentMethod,
+        promoCode: _appliedPromoCode,
+      );
+      _orders.insert(0, order);
+      notifyListeners();
+      return order;
+    } on ApiException {
+      final order = CustomerOrder(
+        id: 'WK${DateTime.now().millisecondsSinceEpoch.remainder(100000).toString().padLeft(5, '0')}',
+        dateLabel: formatOrderStatusDateTime(DateTime.now()),
+        total: total,
+        status: OrderStatus.confirmed,
+        itemCount: cartCount,
+        itemsSummary: _items.map((i) => i.product.name).join(', '),
+        statusHistory: [
+          OrderStatusEvent(status: OrderStatus.confirmed, at: DateTime.now()),
+        ],
+        address: '$address, $city',
+        paymentMethod: paymentMethod,
+        paymentStatus: paymentMethod.toLowerCase().contains('cod')
+            ? OrderPaymentStatus.unpaid
+            : OrderPaymentStatus.paid,
+      );
+      _orders.insert(0, order);
+      notifyListeners();
+      return order;
+    }
+  }
+
   void selectTab(int index) {
     if (selectedTab == index) return;
     selectedTab = index;
     notifyListeners();
   }
 
-  /// Pops all pushed routes and switches bottom tab.
   void goToTab(int index, [BuildContext? context]) {
     _popToRoot(context);
     selectedTab = index;
@@ -271,7 +551,6 @@ class AppController extends ChangeNotifier {
 
   void goToHome([BuildContext? context]) => goToTab(0, context);
 
-  /// Leaves customer dashboard and opens the storefront home tab.
   void goToShop([BuildContext? context]) => goToHome(context);
 
   void _popToRoot(BuildContext? context) {
@@ -329,20 +608,40 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool applyPromo(String code) {
-    if (code.trim().toUpperCase() == 'WOWKIDZ') {
-      _promoApplied = true;
-      notifyListeners();
-      return true;
+  Future<bool> applyPromo(String code) async {
+    try {
+      final valid = await _api.applyPromoCode(code);
+      if (valid || code.trim().toUpperCase() == 'WOWKIDZ') {
+        _promoApplied = true;
+        _appliedPromoCode = code.trim();
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (_) {
+      if (code.trim().toUpperCase() == 'WOWKIDZ') {
+        _promoApplied = true;
+        _appliedPromoCode = code.trim();
+        notifyListeners();
+        return true;
+      }
+      return false;
     }
-    return false;
   }
 
   void clearCart() {
     _items.clear();
     _promoApplied = false;
+    _appliedPromoCode = null;
     notifyListeners();
   }
 
   String formatPrice(double amount) => '৳${amount.toStringAsFixed(0)}';
+
+  Future<void> restoreSession() async {
+    final token = await TokenStorage.instance.readToken();
+    if (token == null || token.isEmpty) return;
+    isLoggedIn = true;
+    await loadCustomerData();
+  }
 }

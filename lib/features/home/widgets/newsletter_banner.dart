@@ -1,8 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
+import 'package:my_first_app/data/api/wowkidz_api.dart';
 
-class NewsletterBanner extends StatelessWidget {
+class NewsletterBanner extends StatefulWidget {
   const NewsletterBanner({super.key});
+
+  @override
+  State<NewsletterBanner> createState() => _NewsletterBannerState();
+}
+
+class _NewsletterBannerState extends State<NewsletterBanner> {
+  final _emailController = TextEditingController();
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _subscribe() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid email')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      await WowKidzApi.instance.subscribeNewsletter(email);
+      if (!mounted) return;
+      _emailController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Subscribed successfully!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +83,8 @@ class NewsletterBanner extends StatelessWidget {
               children: [
                 Expanded(
                   child: TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       hintText: 'Your email',
                       hintStyle: TextStyle(
@@ -63,7 +107,7 @@ class NewsletterBanner extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: _isSubmitting ? null : _subscribe,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: AppColors.primary,
@@ -72,7 +116,13 @@ class NewsletterBanner extends StatelessWidget {
                       vertical: 14,
                     ),
                   ),
-                  child: const Text('Subscribe'),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Subscribe'),
                 ),
               ],
             ),

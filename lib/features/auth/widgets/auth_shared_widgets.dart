@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
-import 'package:my_first_app/data/mock/mock_data.dart';
 
 enum AuthMethod { mobile, email }
 
@@ -11,6 +11,8 @@ class AuthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final catalog = CatalogStore.instance;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(8, 8, 24, 28),
@@ -46,7 +48,7 @@ class AuthHeader extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            MockData.appName,
+            catalog.appName,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
@@ -54,7 +56,7 @@ class AuthHeader extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            MockData.tagline,
+            catalog.tagline,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.white.withValues(alpha: 0.85),
                 ),

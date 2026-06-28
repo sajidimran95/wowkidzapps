@@ -59,7 +59,6 @@ class _AddressFormPageState extends State<AddressFormPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
-    await Future<void>.delayed(const Duration(milliseconds: 500));
 
     final controller = AppController.instance;
     final address = SavedAddress(
@@ -73,17 +72,20 @@ class _AddressFormPageState extends State<AddressFormPage> {
       isDefault: _isDefault,
     );
 
-    if (_isEditing) {
-      controller.updateAddress(address);
-    } else {
-      controller.addAddress(address);
-    }
+    final error = _isEditing
+        ? await controller.updateAddress(address)
+        : await controller.addAddress(address);
 
     if (!mounted) return;
+    setState(() => _isSaving = false);
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isEditing ? 'Address updated' : 'Address saved'),
+        content: Text(
+          error == null
+              ? (_isEditing ? 'Address updated' : 'Address saved')
+              : error,
+        ),
         behavior: SnackBarBehavior.floating,
       ),
     );

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
+import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
-import 'package:my_first_app/data/mock/demo_seed.dart';
-import 'package:my_first_app/data/mock/mock_data.dart';
 import 'package:my_first_app/features/auth/pages/login_page.dart';
 import 'package:my_first_app/features/auth/pages/signup_page.dart';
 import 'package:my_first_app/features/cart/pages/cart_page.dart';
@@ -18,8 +17,9 @@ class DesignPreviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sampleProduct = MockData.allProducts.first;
-    final sampleCategory = MockData.categories.first;
+    final catalog = CatalogStore.instance;
+    final sampleProduct = catalog.allProducts.firstOrNull;
+    final sampleCategory = catalog.categories.firstOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -28,15 +28,15 @@ class DesignPreviewPage extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () {
-              DemoSeed.resetDemoCart();
+              AppController.instance.clearCart();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Demo cart refreshed'),
+                  content: Text('Cart cleared'),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
             },
-            child: const Text('Reset Demo'),
+            child: const Text('Clear Cart'),
           ),
         ],
       ),
@@ -66,7 +66,12 @@ class DesignPreviewPage extends StatelessWidget {
             subtitle: 'Pre-filled demo cart — qty, promo, checkout',
             color: AppColors.accent,
             onTap: () {
-              DemoSeed.initialize();
+              if (sampleProduct != null) {
+                AppController.instance.addToCart(
+                  sampleProduct,
+                  size: sampleProduct.sizes.first,
+                );
+              }
               _open(context, const _TabPreview(tab: 2));
             },
           ),
@@ -108,20 +113,36 @@ class DesignPreviewPage extends StatelessWidget {
             title: 'Category Products',
             subtitle: 'Girls Clothing grid with sort filters',
             color: AppColors.categoryPink,
-            onTap: () => _open(
-              context,
-              CategoryProductsPage(category: sampleCategory),
-            ),
+            onTap: () {
+              if (sampleCategory == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Load catalog from API first')),
+                );
+                return;
+              }
+              _open(
+                context,
+                CategoryProductsPage(category: sampleCategory),
+              );
+            },
           ),
           _PreviewTile(
             icon: Icons.inventory_2_outlined,
             title: 'Product Detail',
             subtitle: 'Images, sizes, quantity, add to cart',
             color: AppColors.primary,
-            onTap: () => _open(
-              context,
-              ProductDetailPage(product: sampleProduct),
-            ),
+            onTap: () {
+              if (sampleProduct == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Load catalog from API first')),
+                );
+                return;
+              }
+              _open(
+                context,
+                ProductDetailPage(product: sampleProduct),
+              );
+            },
           ),
           const SizedBox(height: 8),
           _SectionLabel(title: 'Checkout Flow'),
@@ -131,7 +152,12 @@ class DesignPreviewPage extends StatelessWidget {
             subtitle: 'Address form, payment methods, summary',
             color: AppColors.success,
             onTap: () {
-              DemoSeed.initialize();
+              if (sampleProduct != null) {
+                AppController.instance.addToCart(
+                  sampleProduct,
+                  size: sampleProduct.sizes.first,
+                );
+              }
               _open(context, const CheckoutPage());
             },
           ),
@@ -147,8 +173,7 @@ class DesignPreviewPage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            'All pages use static mock data from wowkidzbd.com style. '
-            'No API connected yet.',
+            'All pages load data from https://wowkidzbd.com/api when available.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppColors.textMuted,

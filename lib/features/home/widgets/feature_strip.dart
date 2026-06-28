@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
-import 'package:my_first_app/data/mock/mock_data.dart';
+import 'package:my_first_app/data/models/feature_item.dart';
 
 class FeatureStrip extends StatelessWidget {
-  const FeatureStrip({super.key});
+  const FeatureStrip({super.key, required this.features});
+
+  final List<FeatureItem> features;
 
   @override
   Widget build(BuildContext context) {
+    if (features.isEmpty) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Container(
@@ -17,7 +21,7 @@ class FeatureStrip extends StatelessWidget {
           border: Border.all(color: AppColors.border, width: 0.5),
         ),
         child: Row(
-          children: MockData.features.map((feature) {
+          children: features.map((feature) {
             return Expanded(
               child: Column(
                 children: [

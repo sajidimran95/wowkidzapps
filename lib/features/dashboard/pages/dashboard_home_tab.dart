@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
-import 'package:my_first_app/data/mock/customer_orders_mock.dart';
 import 'package:my_first_app/features/dashboard/widgets/dashboard_order_tile.dart';
 import 'package:my_first_app/shared/widgets/customer_profile_avatar.dart';
 
@@ -18,7 +17,7 @@ class DashboardHomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = AppController.instance;
-    final running = CustomerOrdersMock.running;
+    final running = controller.ordersForFilter(runningOnly: true);
 
     return ListenableBuilder(
       listenable: controller,
@@ -51,7 +50,7 @@ class DashboardHomeTab extends StatelessWidget {
                   child: _StatCard(
                     icon: Icons.local_shipping_outlined,
                     label: 'Running',
-                    value: '${CustomerOrdersMock.runningCount}',
+                    value: '${running.length}',
                     color: AppColors.primary,
                   ),
                 ),

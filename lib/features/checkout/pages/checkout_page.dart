@@ -50,21 +50,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isPlacingOrder = true);
-    await Future<void>.delayed(const Duration(seconds: 2));
+
+    final order = await controller.placeOrder(
+      name: _nameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      address: _addressController.text.trim(),
+      city: _cityController.text.trim(),
+      paymentMethod: _paymentLabel(_paymentMethod),
+    );
 
     if (!mounted) return;
+    setState(() => _isPlacingOrder = false);
 
-    final orderId =
-        'WK${DateTime.now().millisecondsSinceEpoch.remainder(100000).toString().padLeft(5, '0')}';
-    final total = controller.total;
-    final paymentLabel = _paymentLabel(_paymentMethod);
+    if (order == null) {
+      showCartMessage(context, 'Could not place order. Please try again.');
+      return;
+    }
 
     await Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => OrderSuccessPage(
-          orderId: orderId,
-          total: total,
-          paymentMethod: paymentLabel,
+          orderId: order.id,
+          total: order.total,
+          paymentMethod: order.paymentMethod,
         ),
       ),
     );

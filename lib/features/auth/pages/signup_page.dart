@@ -42,21 +42,28 @@ class _SignupPageState extends State<SignupPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future<void>.delayed(const Duration(seconds: 1));
-
-    if (!mounted) return;
 
     final name = _nameController.text.trim();
     final role = _registerAs == RegisterAs.customer ? 'Customer' : 'Vendor';
     final contact = parseContact(_contactController.text.trim());
 
-    AppController.instance.signup(
+    final error = await AppController.instance.signup(
       name: name,
       phone: contact.phone,
       email: contact.email,
       role: role,
       password: _passwordController.text,
     );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+      return;
+    }
 
     if (_registerAs == RegisterAs.customer) {
       Navigator.pushAndRemoveUntil(

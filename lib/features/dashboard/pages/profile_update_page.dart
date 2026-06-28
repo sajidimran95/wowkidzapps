@@ -53,21 +53,22 @@ class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
 
     final app = AppController.instance;
     final contact = parseContact(_contactController.text.trim());
 
-    app.updateProfile(
+    final profileError = await app.updateProfile(
       name: _nameController.text.trim(),
       phone: contact.phone,
       email: contact.email,
     );
 
-    var message = 'Profile updated successfully';
+    var message = profileError == null
+        ? 'Profile updated successfully'
+        : 'Profile saved locally. $profileError';
 
     if (_isChangingPassword) {
-      final error = app.updatePassword(
+      final error = await app.updatePassword(
         currentPassword: _currentPasswordController.text,
         newPassword: _newPasswordController.text,
       );
@@ -87,6 +88,7 @@ class _ProfileUpdatePageState extends State<ProfileUpdatePage> {
     }
 
     if (!mounted) return;
+    setState(() => _isSaving = false);
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

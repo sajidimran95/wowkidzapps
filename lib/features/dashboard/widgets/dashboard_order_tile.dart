@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
-import 'package:my_first_app/data/mock/customer_orders_mock.dart';
 import 'package:my_first_app/data/models/customer_order.dart';
 import 'package:my_first_app/features/dashboard/pages/order_detail_page.dart';
 import 'package:my_first_app/features/dashboard/utils/pay_now_flow.dart';
@@ -218,23 +217,30 @@ class OrderStatusSummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = AppController.instance;
+    final runningCount =
+        controller.ordersForFilter(runningOnly: true).length;
+
+    int countByStatus(OrderStatus status) =>
+        controller.ordersForFilter(status: status).length;
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
           _SummaryChip(
             label: 'Running',
-            count: CustomerOrdersMock.runningCount,
+            count: runningCount,
             color: AppColors.primary,
             icon: Icons.local_shipping_outlined,
             onTap: () => onStatusTap(null),
           ),
           const SizedBox(width: 8),
           for (final status in kOrderTrackingSteps)
-            if (CustomerOrdersMock.countByStatus(status) > 0) ...[
+            if (countByStatus(status) > 0) ...[
               _SummaryChip(
                 label: status.label,
-                count: CustomerOrdersMock.countByStatus(status),
+                count: countByStatus(status),
                 color: status.color,
                 icon: status.icon,
                 onTap: () => onStatusTap(status),
