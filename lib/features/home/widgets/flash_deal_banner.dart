@@ -5,17 +5,23 @@ import 'package:my_first_app/data/models/product.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/shared/utils/bangladesh_time.dart';
 
-DateTime? parseSectionEndDate(String? raw) => parseApiInstant(raw);
+DateTime? parseSectionEndDate(String? raw) => parseFlashDealEndDate(raw);
 
-/// Latest flash-deal end among API date and product deal dates.
+/// Nearest active flash-deal end from API section date or product admin dates.
 DateTime? resolveFlashDealEndDate(String? apiDate, List<Product> products) {
+  final now = utcNow();
   final candidates = <DateTime>[];
-  final fromApi = parseSectionEndDate(apiDate);
-  if (fromApi != null) candidates.add(fromApi);
 
+  void addCandidate(String? raw) {
+    final end = parseFlashDealEndDate(raw);
+    if (end != null && end.isAfter(now)) {
+      candidates.add(end);
+    }
+  }
+
+  addCandidate(apiDate);
   for (final product in products) {
-    final end = parseSectionEndDate(product.dealEndDate);
-    if (end != null) candidates.add(end);
+    addCandidate(product.dealEndDate);
   }
 
   if (candidates.isEmpty) return null;
@@ -205,8 +211,32 @@ class _FlashDealBannerState extends State<FlashDealBanner>
                     ],
                   ),
                   const SizedBox(height: 12),
-                  if (hasCountdown)
-                    _CountdownRow(remaining: _remaining)
+                  if (hasCountdown) ...[
+                    Text(
+                      'Time remaining',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.88),
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    _CountdownRow(remaining: _remaining),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Ends ${formatBangladeshDateTime(widget.endDate!)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ] else if (widget.endDate != null)
+                    Text(
+                      'Deal ended',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.92),
+                            fontWeight: FontWeight.w600,
+                          ),
+                    )
                   else
                     Text(
                       'Limited time offers — grab them fast!',

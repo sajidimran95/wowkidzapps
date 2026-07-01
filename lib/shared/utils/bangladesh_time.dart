@@ -74,6 +74,57 @@ String orderDateLabelFromJson(Map<String, dynamic> json) {
   return formatBangladeshDateTime(utcNow());
 }
 
+/// Parse flash-deal / campaign deadline from admin (date or datetime, BDT).
+DateTime? parseFlashDealEndDate(String? raw) {
+  if (raw == null || raw.trim().isEmpty) return null;
+  final value = raw.trim();
+
+  final dateOnly = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+  if (dateOnly.hasMatch(value)) {
+    final parts = value.split('-');
+    final year = int.parse(parts[0]);
+    final month = int.parse(parts[1]);
+    final day = int.parse(parts[2]);
+    return DateTime.utc(year, month, day, 23, 59, 59)
+        .subtract(kBangladeshOffset);
+  }
+
+  final parsed = DateTime.tryParse(value);
+  if (parsed == null) return null;
+
+  final hasTimezone = value.endsWith('Z') ||
+      RegExp(r'[+-]\d{2}:\d{2}$').hasMatch(value) ||
+      RegExp(r'[+-]\d{4}$').hasMatch(value);
+  if (hasTimezone) return parsed.toUtc();
+
+  final hasTime = value.contains(':');
+  if (!hasTime ||
+      (parsed.hour == 0 &&
+          parsed.minute == 0 &&
+          parsed.second == 0 &&
+          !value.contains('T'))) {
+    return DateTime.utc(
+      parsed.year,
+      parsed.month,
+      parsed.day,
+      23,
+      59,
+      59,
+    ).subtract(kBangladeshOffset);
+  }
+
+  return DateTime.utc(
+    parsed.year,
+    parsed.month,
+    parsed.day,
+    parsed.hour,
+    parsed.minute,
+    parsed.second,
+    parsed.millisecond,
+    parsed.microsecond,
+  ).subtract(kBangladeshOffset);
+}
+
 /// Compare countdown / deadlines using Bangladesh-aligned instants.
 DateTime? parseApiInstant(String? raw) => parseApiDateTime(raw);
 
