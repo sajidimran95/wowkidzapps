@@ -3,7 +3,8 @@ import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/models/category_item.dart';
 import 'package:my_first_app/features/category/pages/category_products_page.dart';
-import 'package:my_first_app/features/home/widgets/search_bar_widget.dart';
+import 'package:my_first_app/features/search/widgets/live_search_bar.dart';
+import 'package:my_first_app/shared/utils/search_navigation.dart';
 import 'package:my_first_app/shared/widgets/api_state_views.dart';
 import 'package:my_first_app/shared/widgets/category_image.dart';
 import 'package:my_first_app/shared/widgets/section_header.dart';
@@ -17,6 +18,7 @@ class CategoryPage extends StatefulWidget {
 
 class _CategoryPageState extends State<CategoryPage> {
   final _catalog = CatalogStore.instance;
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -24,6 +26,12 @@ class _CategoryPageState extends State<CategoryPage> {
     if (!_catalog.hasData && !_catalog.isLoading) {
       _catalog.loadHome();
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -75,9 +83,13 @@ class _CategoryPageState extends State<CategoryPage> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: SearchBarWidget(),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: LiveSearchBar(
+                            controller: _searchController,
+                            onSubmitted: (query) =>
+                                openProductSearch(context, query),
+                          ),
                         ),
                       ],
                     ),

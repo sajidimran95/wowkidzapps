@@ -9,6 +9,8 @@ class OrderSummaryCard extends StatelessWidget {
     required this.discount,
     required this.total,
     this.formatPrice,
+    this.compact = false,
+    this.shippingLabel,
   });
 
   final double subtotal;
@@ -16,45 +18,65 @@ class OrderSummaryCard extends StatelessWidget {
   final double discount;
   final double total;
   final String Function(double)? formatPrice;
+  final bool compact;
+  /// When set (e.g. "At checkout"), shown instead of a numeric shipping value.
+  final String? shippingLabel;
 
   String _format(double value) =>
       formatPrice?.call(value) ?? '৳${value.toStringAsFixed(0)}';
 
   @override
   Widget build(BuildContext context) {
+    final padding = compact ? 10.0 : 16.0;
+    final rowGap = compact ? 4.0 : 8.0;
+    final dividerPadding = compact ? 6.0 : 12.0;
+    final textStyle = compact
+        ? Theme.of(context).textTheme.bodySmall
+        : Theme.of(context).textTheme.bodyMedium;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(compact ? 12 : 16),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
-          _Row(label: 'Subtotal', value: _format(subtotal)),
-          const SizedBox(height: 8),
+          _Row(
+            label: 'Subtotal',
+            value: _format(subtotal),
+            style: textStyle,
+          ),
+          SizedBox(height: rowGap),
           _Row(
             label: 'Shipping',
-            value: shipping == 0 ? 'FREE' : _format(shipping),
-            valueColor: shipping == 0 ? AppColors.success : null,
+            value: shippingLabel ??
+                (shipping == 0 ? 'FREE' : _format(shipping)),
+            valueColor: shippingLabel == null && shipping == 0
+                ? AppColors.success
+                : null,
+            style: textStyle,
           ),
           if (discount > 0) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: rowGap),
             _Row(
               label: 'Discount',
               value: '-${_format(discount)}',
               valueColor: AppColors.success,
+              style: textStyle,
             ),
           ],
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(height: 1),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: dividerPadding),
+            child: const Divider(height: 1),
           ),
           _Row(
             label: 'Total',
             value: _format(total),
             isBold: true,
             valueColor: AppColors.primary,
+            style: textStyle,
           ),
         ],
       ),
@@ -68,25 +90,28 @@ class _Row extends StatelessWidget {
     required this.value,
     this.isBold = false,
     this.valueColor,
+    this.style,
   });
 
   final String label;
   final String value;
   final bool isBold;
   final Color? valueColor;
+  final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodyMedium?.copyWith(
+    final resolved = style ?? Theme.of(context).textTheme.bodyMedium;
+    final rowStyle = resolved?.copyWith(
           fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
           color: valueColor ?? AppColors.textPrimary,
         );
 
     return Row(
       children: [
-        Text(label, style: style),
+        Text(label, style: rowStyle),
         const Spacer(),
-        Text(value, style: style),
+        Text(value, style: rowStyle),
       ],
     );
   }

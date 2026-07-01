@@ -4,6 +4,7 @@ import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/features/auth/pages/customer_login_welcome_page.dart';
 import 'package:my_first_app/features/auth/pages/login_page.dart';
 import 'package:my_first_app/features/auth/widgets/auth_shared_widgets.dart';
+import 'package:my_first_app/features/auth/widgets/auth_ui.dart';
 
 enum RegisterAs { customer, vendor }
 
@@ -35,8 +36,8 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   String get _registerButtonLabel => _registerAs == RegisterAs.customer
-      ? 'Register as Customer'
-      : 'Register as Vendor';
+      ? 'Join as Customer 🛍️'
+      : 'Join as Vendor 🏪';
 
   Future<void> _signup() async {
     if (!_formKey.currentState!.validate()) return;
@@ -87,168 +88,140 @@ class _SignupPageState extends State<SignupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            AuthHeader(onBack: () => Navigator.pop(context)),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Register',
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Create your WowKidz account',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                      ),
-                      const SizedBox(height: 24),
-                      AuthInputField(
-                        controller: _nameController,
-                        label: 'Full Name',
-                        hint: 'Full Name',
-                        icon: Icons.person_outline,
-                        required: true,
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Full Name is required' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      AuthInputField(
-                        controller: _contactController,
-                        label: 'Email / Mobile',
-                        hint: 'Email or Mobile Number',
-                        icon: Icons.alternate_email,
-                        keyboardType: TextInputType.emailAddress,
-                        required: true,
-                        validator: validateEmailOrMobile,
-                      ),
-                      const SizedBox(height: 16),
-                      _RegisterAsSelector(
-                        value: _registerAs,
-                        onChanged: (v) => setState(() => _registerAs = v),
-                      ),
-                      const SizedBox(height: 16),
-                      AuthInputField(
-                        controller: _passwordController,
-                        label: 'Password',
-                        hint: 'Password',
-                        icon: Icons.lock_outline,
-                        obscure: _obscurePassword,
-                        required: true,
-                        suffix: IconButton(
-                          onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword,
-                          ),
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: AppColors.textMuted,
-                            size: 20,
-                          ),
+      body: AuthPageBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              AuthHeader(onBack: () => Navigator.pop(context)),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const AuthPageTitle(
+                          title: 'Join WowKidz! 🎉',
+                          subtitle:
+                              'Create your account & discover amazing kids styles!',
                         ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return 'Password is required';
-                          }
-                          if (v.length < 6) {
-                            return 'Password must be at least 6 characters';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      AuthInputField(
-                        controller: _confirmPasswordController,
-                        label: 'Confirm Password',
-                        hint: 'Confirm Password',
-                        icon: Icons.lock_outline,
-                        obscure: _obscureConfirm,
-                        suffix: IconButton(
-                          onPressed: () => setState(
-                            () => _obscureConfirm = !_obscureConfirm,
-                          ),
-                          icon: Icon(
-                            _obscureConfirm
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: AppColors.textMuted,
-                            size: 20,
-                          ),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return 'Please confirm your password';
-                          }
-                          if (v != _passwordController.text) {
-                            return 'Passwords do not match';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 28),
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _signup,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(_registerButtonLabel),
-                      ),
-                      const SizedBox(height: 28),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Already have an account? ',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          GestureDetector(
-                            onTap: () => Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LoginPage(),
+                        const SizedBox(height: 20),
+                        AuthFormCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              AuthInputField(
+                                controller: _nameController,
+                                label: 'Full Name',
+                                hint: 'What should we call you?',
+                                icon: Icons.person_outline,
+                                required: true,
+                                validator: (v) => v == null || v.trim().isEmpty
+                                    ? 'Full Name is required'
+                                    : null,
                               ),
-                            ),
-                            child: Text(
-                              'Login',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w700,
+                              const SizedBox(height: 16),
+                              AuthInputField(
+                                controller: _contactController,
+                                label: 'Email / Mobile',
+                                hint: 'Your email or phone number',
+                                icon: Icons.alternate_email,
+                                keyboardType: TextInputType.emailAddress,
+                                required: true,
+                                validator: validateEmailOrMobile,
+                              ),
+                              const SizedBox(height: 16),
+                              _RegisterAsSelector(
+                                value: _registerAs,
+                                onChanged: (v) => setState(() => _registerAs = v),
+                              ),
+                              const SizedBox(height: 16),
+                              AuthInputField(
+                                controller: _passwordController,
+                                label: 'Password',
+                                hint: 'Pick a strong password',
+                                icon: Icons.lock_outline,
+                                obscure: _obscurePassword,
+                                required: true,
+                                suffix: IconButton(
+                                  onPressed: () => setState(
+                                    () => _obscurePassword = !_obscurePassword,
                                   ),
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
+                                    color: AppColors.textMuted,
+                                    size: 20,
+                                  ),
+                                ),
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) {
+                                    return 'Password is required';
+                                  }
+                                  if (v.length < 6) {
+                                    return 'Password must be at least 6 characters';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              AuthInputField(
+                                controller: _confirmPasswordController,
+                                label: 'Confirm Password',
+                                hint: 'Type password again',
+                                icon: Icons.lock_outline,
+                                obscure: _obscureConfirm,
+                                suffix: IconButton(
+                                  onPressed: () => setState(
+                                    () => _obscureConfirm = !_obscureConfirm,
+                                  ),
+                                  icon: Icon(
+                                    _obscureConfirm
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
+                                    color: AppColors.textMuted,
+                                    size: 20,
+                                  ),
+                                ),
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) {
+                                    return 'Please confirm your password';
+                                  }
+                                  if (v != _passwordController.text) {
+                                    return 'Passwords do not match';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 22),
+                              AuthPrimaryButton(
+                                label: _registerButtonLabel,
+                                isLoading: _isLoading,
+                                onPressed: _signup,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        AuthLinkRow(
+                          prompt: 'Already have an account?',
+                          actionLabel: 'Sign In',
+                          onTap: () => Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LoginPage(),
                             ),
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -269,29 +242,24 @@ class _RegisterAsSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Register As*',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        const SizedBox(height: 10),
+        Text('I want to*', style: AuthTextStyles.label(context)),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
               child: _RoleCard(
-                title: 'Customer',
-                subtitle: 'Shop kids products',
+                title: 'Shop',
+                subtitle: 'Buy',
                 icon: Icons.shopping_bag_outlined,
                 selected: value == RegisterAs.customer,
                 onTap: () => onChanged(RegisterAs.customer),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: _RoleCard(
-                title: 'Vendor',
-                subtitle: 'Sell on WowKidz',
+                title: 'Sell',
+                subtitle: 'Store',
                 icon: Icons.storefront_outlined,
                 selected: value == RegisterAs.vendor,
                 onTap: () => onChanged(RegisterAs.vendor),
@@ -325,45 +293,51 @@ class _RoleCard extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
         decoration: BoxDecoration(
           color: selected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : AppColors.background,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? AppColors.primary : AppColors.border,
             width: selected ? 1.5 : 1,
           ),
         ),
-        child: Column(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 28,
+              size: 18,
               color: selected ? AppColors.primary : AppColors.textMuted,
             ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                color: selected ? AppColors.primary : AppColors.textPrimary,
+            const SizedBox(width: 6),
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AuthTextStyles.chipTitle(selected: selected).copyWith(
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AuthTextStyles.chipSubtitle(context).copyWith(
+                      fontSize: 9,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.textMuted,
-                    fontSize: 10,
-                  ),
-            ),
             if (selected) ...[
-              const SizedBox(height: 6),
-              const Icon(Icons.check_circle, size: 16, color: AppColors.primary),
+              const SizedBox(width: 4),
+              const Icon(Icons.check_circle, size: 12, color: AppColors.primary),
             ],
           ],
         ),

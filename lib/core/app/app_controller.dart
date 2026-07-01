@@ -8,6 +8,7 @@ import 'package:my_first_app/data/models/cart_item.dart';
 import 'package:my_first_app/data/models/customer_order.dart';
 import 'package:my_first_app/data/models/product.dart';
 import 'package:my_first_app/data/models/saved_address.dart';
+import 'package:my_first_app/data/models/shipping_settings.dart';
 import 'package:my_first_app/data/models/support_ticket.dart';
 
 class AppController extends ChangeNotifier {
@@ -49,7 +50,46 @@ class AppController extends ChangeNotifier {
   double get subtotal =>
       _items.fold(0, (sum, item) => sum + item.lineTotal);
 
-  double get shipping => _items.isEmpty ? 0 : (subtotal >= 2000 ? 0 : 120);
+  ShippingSettings get shippingSettings => _catalog.shippingSettings;
+
+  String? _selectedShippingId;
+  String? get selectedShippingId => _selectedShippingId;
+
+  bool get qualifiesForFreeShipping =>
+      shippingSettings.freeShippingEnabled &&
+      _items.isNotEmpty &&
+      subtotal >= shippingSettings.freeShippingMinimum;
+
+  double get freeShippingRemaining =>
+      qualifiesForFreeShipping
+          ? 0
+          : (shippingSettings.freeShippingMinimum - subtotal)
+              .clamp(0, double.infinity);
+
+  double get shipping {
+    if (_items.isEmpty) return 0;
+    if (qualifiesForFreeShipping) return 0;
+    final option = shippingSettings.optionById(_selectedShippingId) ??
+        shippingSettings.defaultOption;
+    return option?.price ?? 0;
+  }
+
+  /// Cart total excludes shipping until checkout delivery option is selected.
+  double get cartTotal => subtotal - discount;
+
+  void setShippingOption(String? id) {
+    if (_selectedShippingId == id) return;
+    _selectedShippingId = id;
+    notifyListeners();
+  }
+
+  void ensureDefaultShippingOption() {
+    if (_selectedShippingId != null &&
+        shippingSettings.optionById(_selectedShippingId) != null) {
+      return;
+    }
+    _selectedShippingId = shippingSettings.defaultOption?.id;
+  }
 
   double get discount => _promoApplied ? subtotal * 0.05 : 0;
 
@@ -422,7 +462,7 @@ class AppController extends ChangeNotifier {
           id: 'TKT-${DateTime.now().millisecondsSinceEpoch}',
           subject: subject,
           message: message,
-          createdAt: DateTime.now(),
+          createdAt: utcNow(),
           attachmentName: attachmentName,
         ),
       );
@@ -489,7 +529,7 @@ class AppController extends ChangeNotifier {
         .toList();
 
     try {
-      final order = await _api.placeOrder(
+      final placed = await _api.placeOrder(
         items: items,
         name: name,
         phone: phone,
@@ -497,6 +537,14 @@ class AppController extends ChangeNotifier {
         city: city,
         paymentMethod: paymentMethod,
         promoCode: _appliedPromoCode,
+        shippingId: _selectedShippingId,
+        shippingCharge: shipping,
+      );
+      final order = placed.copyWith(
+        paymentStatus: CustomerOrder.resolvePaymentStatus(
+          paymentMethod: paymentMethod,
+          paymentStatus: placed.paymentStatus,
+        ),
       );
       _orders.insert(0, order);
       notifyListeners();
@@ -504,19 +552,20 @@ class AppController extends ChangeNotifier {
     } on ApiException {
       final order = CustomerOrder(
         id: 'WK${DateTime.now().millisecondsSinceEpoch.remainder(100000).toString().padLeft(5, '0')}',
-        dateLabel: formatOrderStatusDateTime(DateTime.now()),
+        dateLabel: formatOrderStatusDateTime(bangladeshNow()),
         total: total,
         status: OrderStatus.confirmed,
         itemCount: cartCount,
         itemsSummary: _items.map((i) => i.product.name).join(', '),
         statusHistory: [
-          OrderStatusEvent(status: OrderStatus.confirmed, at: DateTime.now()),
+          OrderStatusEvent(status: OrderStatus.confirmed, at: bangladeshNow()),
         ],
         address: '$address, $city',
         paymentMethod: paymentMethod,
-        paymentStatus: paymentMethod.toLowerCase().contains('cod')
-            ? OrderPaymentStatus.unpaid
-            : OrderPaymentStatus.paid,
+        paymentStatus: CustomerOrder.resolvePaymentStatus(
+          paymentMethod: paymentMethod,
+          paymentStatus: OrderPaymentStatus.paid,
+        ),
       );
       _orders.insert(0, order);
       notifyListeners();
@@ -544,10 +593,12 @@ class AppController extends ChangeNotifier {
     if (root != null && root.mounted) {
       ScaffoldMessenger.of(root).hideCurrentSnackBar();
     }
-    goToTab(2, context);
+    goToTab(3, context);
   }
 
-  void goToCategory([BuildContext? context]) => goToTab(1, context);
+  void goToCategory([BuildContext? context]) => goToTab(2, context);
+
+  void goToSearch([BuildContext? context]) => goToTab(1, context);
 
   void goToHome([BuildContext? context]) => goToTab(0, context);
 
@@ -562,7 +613,7 @@ class AppController extends ChangeNotifier {
   }
 
   void addToCart(Product product, {required String size, int quantity = 1}) {
-    if (!product.inStock) return;
+    if (!product.isPurchasable) return;
 
     final existing = _items.where(
       (item) => item.product.id == product.id && item.size == size,

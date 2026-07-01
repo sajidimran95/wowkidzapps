@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/network/json_utils.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
+import 'package:my_first_app/shared/utils/bangladesh_time.dart';
+
+export 'package:my_first_app/shared/utils/bangladesh_time.dart'
+    show
+        formatOrderStatusDateTime,
+        formatBangladeshDateTime,
+        bangladeshNow,
+        utcNow,
+        parseApiDateTime;
 
 enum OrderPaymentStatus {
   paid,
@@ -84,20 +93,6 @@ class OrderStatusEvent {
   final DateTime at;
 }
 
-String formatOrderStatusDateTime(DateTime dateTime) {
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-  final hour = dateTime.hour;
-  final displayHour = hour % 12 == 0 ? 12 : hour % 12;
-  final minute = dateTime.minute.toString().padLeft(2, '0');
-  final period = hour >= 12 ? 'PM' : 'AM';
-
-  return '${dateTime.day} ${months[dateTime.month - 1]} ${dateTime.year}, '
-      '$displayHour:$minute $period';
-}
-
 class CustomerOrder {
   const CustomerOrder({
     required this.id,
@@ -122,6 +117,23 @@ class CustomerOrder {
   final String address;
   final String paymentMethod;
   final OrderPaymentStatus paymentStatus;
+
+  static bool isCashOnDelivery(String method) {
+    final value = method.toLowerCase();
+    return value.contains('cash') ||
+        value.contains('cod') ||
+        value.contains('cash on delivery');
+  }
+
+  static OrderPaymentStatus resolvePaymentStatus({
+    required String paymentMethod,
+    required OrderPaymentStatus paymentStatus,
+  }) {
+    if (isCashOnDelivery(paymentMethod)) {
+      return OrderPaymentStatus.unpaid;
+    }
+    return paymentStatus;
+  }
 
   CustomerOrder copyWith({
     OrderPaymentStatus? paymentStatus,
@@ -154,27 +166,27 @@ class CustomerOrder {
           final map = asJsonMap(e);
           return OrderStatusEvent(
             status: _parseOrderStatus(readString(map['status'])),
-            at: DateTime.tryParse(readString(map['at'] ?? map['date'])) ??
-                DateTime.now(),
+            at: parseApiDateTime(readString(map['at'] ?? map['date'])) ??
+                bangladeshNow(),
           );
         })
         .toList();
 
     final paymentRaw =
         readString(json['payment_status'] ?? json['paymentStatus'], 'paid');
-    final paymentStatus = paymentRaw.toLowerCase().contains('unpaid') ||
-            paymentRaw.toLowerCase() == 'pending'
-        ? OrderPaymentStatus.unpaid
-        : OrderPaymentStatus.paid;
+    final paymentMethod =
+        readString(json['payment_method'] ?? json['paymentMethod']);
+    final paymentStatus = resolvePaymentStatus(
+      paymentMethod: paymentMethod,
+      paymentStatus: paymentRaw.toLowerCase().contains('unpaid') ||
+              paymentRaw.toLowerCase() == 'pending'
+          ? OrderPaymentStatus.unpaid
+          : OrderPaymentStatus.paid,
+    );
 
     return CustomerOrder(
       id: readString(json['id'] ?? json['order_id'] ?? json['order_number']),
-      dateLabel: readString(
-        json['date_label'] ?? json['date'] ?? json['created_at'],
-        formatOrderStatusDateTime(
-          DateTime.tryParse(readString(json['created_at'])) ?? DateTime.now(),
-        ),
-      ),
+      dateLabel: orderDateLabelFromJson(json),
       total: readDouble(json['total'] ?? json['grand_total'] ?? json['amount']),
       status: status,
       itemCount: readInt(json['item_count'] ?? json['items_count'], 1),
@@ -182,10 +194,10 @@ class CustomerOrder {
         json['items_summary'] ?? json['summary'] ?? json['items'],
       ),
       statusHistory: history.isEmpty
-          ? [OrderStatusEvent(status: status, at: DateTime.now())]
+          ? [OrderStatusEvent(status: status, at: bangladeshNow())]
           : history,
       address: readString(json['address'] ?? json['shipping_address']),
-      paymentMethod: readString(json['payment_method'] ?? json['paymentMethod']),
+      paymentMethod: paymentMethod,
       paymentStatus: paymentStatus,
     );
   }

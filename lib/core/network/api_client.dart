@@ -54,12 +54,30 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? data,
     Map<String, dynamic>? queryParameters,
+    Options? options,
   }) async {
     try {
       final response = await _dio.post<dynamic>(
         path,
         data: data,
         queryParameters: queryParameters,
+        options: options,
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    }
+  }
+
+  Future<dynamic> postMultipart(
+    String path, {
+    required FormData formData,
+  }) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        path,
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
       );
       return response.data;
     } on DioException catch (e) {

@@ -66,5 +66,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>WowKidz uses the camera to search products by photo.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>WowKidz uses the microphone for voice product search.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>WowKidz converts your voice into a product search.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>WowKidz uses your photos to find similar products.</string>
 </dict>
 </plist>

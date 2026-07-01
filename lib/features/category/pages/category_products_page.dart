@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/models/category_item.dart';
 import 'package:my_first_app/data/models/product.dart';
-import 'package:my_first_app/features/product/widgets/product_grid_tile.dart';
-import 'package:my_first_app/shared/utils/cart_snackbar.dart';
+import 'package:my_first_app/features/product/widgets/product_listing_view.dart';
+import 'package:my_first_app/features/search/pages/search_results_page.dart';
+import 'package:my_first_app/shared/utils/product_filters.dart';
 import 'package:my_first_app/shared/widgets/api_state_views.dart';
 import 'package:my_first_app/shared/widgets/category_image.dart';
 
@@ -20,10 +20,17 @@ class CategoryProductsPage extends StatefulWidget {
 
 class _CategoryProductsPageState extends State<CategoryProductsPage> {
   final _catalog = CatalogStore.instance;
-  String _sort = 'Popular';
+  late ProductFilterCriteria _filters = ProductFilterCriteria(
+    category: widget.category.name,
+  );
   List<Product> _products = [];
   bool _isLoading = true;
   String? _error;
+
+  String get _activeCategory =>
+      _filters.category?.trim().isNotEmpty == true
+          ? _filters.category!.trim()
+          : widget.category.name;
 
   @override
   void initState() {
@@ -38,155 +45,96 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     });
 
     try {
-      final products =
-          await _catalog.fetchCategoryProducts(widget.category.name);
+      final products = await _catalog.fetchCategoryProducts(_activeCategory);
+      final enriched = await _catalog.enrichProductsWithVariants(products);
       if (!mounted) return;
       setState(() {
-        _products = products;
+        _products = enriched;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
-        _products = _catalog.productsByCategory(widget.category.name);
+        _products = _catalog.productsByCategory(_activeCategory);
         _isLoading = false;
       });
     }
   }
 
-  List<Product> get _sortedProducts {
-    final sorted = List<Product>.of(_products);
-    switch (_sort) {
-      case 'Price: Low':
-        sorted.sort((a, b) => a.salePrice.compareTo(b.salePrice));
-      case 'Price: High':
-        sorted.sort((a, b) => b.salePrice.compareTo(a.salePrice));
-      case 'Discount':
-        sorted.sort((a, b) => b.discountPercent.compareTo(a.discountPercent));
+  void _onFiltersChanged(ProductFilterCriteria filters) {
+    final previousCategory = _activeCategory;
+    setState(() => _filters = filters);
+    final nextCategory = _activeCategory;
+    if (nextCategory != previousCategory) {
+      _loadProducts();
     }
-    return sorted;
+  }
+
+  List<String> get _categoryOptions {
+    final names = _catalog.categories
+        .map((c) => c.name)
+        .where((name) => name.isNotEmpty)
+        .toList();
+    if (names.isEmpty) return [_activeCategory];
+    return names;
   }
 
   @override
   Widget build(BuildContext context) {
-    final products = _sortedProducts;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(widget.category.name),
+        title: Text(_activeCategory),
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.tune)),
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SearchResultsPage(query: ''),
+                ),
+              );
+            },
+            icon: const Icon(Icons.search),
+          ),
         ],
       ),
       body: _isLoading
           ? const ApiLoadingView(message: 'Loading products...')
-          : _error != null && products.isEmpty
+          : _error != null && _products.isEmpty
               ? ApiErrorView(message: _error!, onRetry: _loadProducts)
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      height: 44,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        children:
-                            ['Popular', 'Price: Low', 'Price: High', 'Discount']
-                                .map((sort) {
-                          final selected = _sort == sort;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(sort),
-                              selected: selected,
-                              onSelected: (_) => setState(() => _sort = sort),
-                              selectedColor:
-                                  AppColors.primary.withValues(alpha: 0.15),
-                              checkmarkColor: AppColors.primary,
-                              labelStyle: TextStyle(
-                                color: selected
-                                    ? AppColors.primary
-                                    : AppColors.textSecondary,
-                                fontWeight:
-                                    selected ? FontWeight.w600 : FontWeight.w500,
-                                fontSize: 12,
-                              ),
-                            ),
-                          );
-                        }).toList(),
+              : ProductListingView(
+                  allProducts: _products,
+                  filters: _filters,
+                  onFiltersChanged: _onFiltersChanged,
+                  showCategoryFilter: true,
+                  categoryOptions: _categoryOptions,
+                  emptyWidget: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CategoryImage(
+                            category: widget.category,
+                            size: 72,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No products yet',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Products for $_activeCategory coming soon.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                      child: Text(
-                        '${products.length} products found',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textMuted,
-                            ),
-                      ),
-                    ),
-                    Expanded(
-                      child: products.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(32),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    CategoryImage(
-                                      category: widget.category,
-                                      size: 72,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No products yet',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Products for ${widget.category.name} coming soon.',
-                                      textAlign: TextAlign.center,
-                                      style:
-                                          Theme.of(context).textTheme.bodyMedium,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          : GridView.builder(
-                              padding: const EdgeInsets.all(16),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                                childAspectRatio: 0.58,
-                              ),
-                              itemCount: products.length,
-                              itemBuilder: (context, index) {
-                                final product = products[index];
-                                return ProductGridTile(
-                                  product: product,
-                                  onAddToCart: () {
-                                    AppController.instance.addToCart(
-                                      product,
-                                      size: product.sizes.first,
-                                    );
-                                    showAddedToCartSnackBar(
-                                      context,
-                                      product.name,
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                    ),
-                  ],
+                  ),
                 ),
     );
   }

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:my_first_app/core/app/app_controller.dart';
-import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/models/product.dart';
-import 'package:my_first_app/shared/utils/cart_snackbar.dart';
 import 'package:my_first_app/features/home/pages/product_collection_page.dart';
+import 'package:my_first_app/features/home/widgets/flash_deal_banner.dart';
 import 'package:my_first_app/features/home/widgets/product_card.dart';
+import 'package:my_first_app/shared/utils/product_add_to_cart.dart';
+import 'package:my_first_app/shared/utils/product_sort.dart';
 import 'package:my_first_app/shared/widgets/section_header.dart';
 
 class ProductSection extends StatelessWidget {
@@ -13,9 +13,10 @@ class ProductSection extends StatelessWidget {
     required this.title,
     required this.products,
     this.subtitle,
-    this.showViewAll = false,
+    this.showViewAll = true,
     this.isFlashDeal = false,
-    this.viewAllProducts,
+    this.sectionKey,
+    this.endDate,
   });
 
   final String title;
@@ -23,88 +24,64 @@ class ProductSection extends StatelessWidget {
   final List<Product> products;
   final bool showViewAll;
   final bool isFlashDeal;
-  final List<Product>? viewAllProducts;
+  final String? sectionKey;
+  final DateTime? endDate;
+
+  void _openViewAll(BuildContext context, List<Product> items) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProductCollectionPage(
+          title: title,
+          products: items,
+          sectionKey: sectionKey,
+        ),
+      ),
+    );
+  }
+
+  static const _sectionHeight = 328.0;
 
   @override
   Widget build(BuildContext context) {
+    final items = sortProductsStockFirst(products);
+    if (items.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(
-          title: title,
-          subtitle: subtitle,
-          trailing: isFlashDeal ? const _EndsSoonChip() : null,
-          onViewAll: showViewAll
-              ? () {
-                  final items = viewAllProducts ?? products;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProductCollectionPage(
-                        title: title,
-                        products: items,
-                      ),
-                    ),
-                  );
-                }
-              : null,
-        ),
+        if (isFlashDeal)
+          FlashDealBanner(
+            title: title,
+            endDate: endDate,
+            onViewAll: showViewAll ? () => _openViewAll(context, items) : null,
+          )
+        else
+          SectionHeader(
+            title: title,
+            subtitle: subtitle,
+            onViewAll: showViewAll ? () => _openViewAll(context, items) : null,
+          ),
         SizedBox(
-          height: 370,
+          height: _sectionHeight,
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.fromLTRB(16, 0, 16, isFlashDeal ? 8 : 4),
             scrollDirection: Axis.horizontal,
-            itemCount: products.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemCount: items.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (_, index) {
-              return ProductCard(
-                product: products[index],
-                onAddToCart: () {
-                  final product = products[index];
-                  AppController.instance.addToCart(
-                    product,
-                    size: product.sizes.first,
-                  );
-                  showAddedToCartSnackBar(context, product.name);
-                },
+              return SizedBox(
+                height: _sectionHeight,
+                child: ProductCard(
+                  product: items[index],
+                  onAddToCart: () =>
+                      handleProductAddToCart(context, items[index]),
+                ),
               );
             },
           ),
         ),
       ],
-    );
-  }
-}
-
-class _EndsSoonChip extends StatelessWidget {
-  const _EndsSoonChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.flashDeal, Color(0xFFFF6B81)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.timer_outlined, color: Colors.white, size: 14),
-          SizedBox(width: 4),
-          Text(
-            'Ends Soon',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

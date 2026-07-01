@@ -10,16 +10,23 @@ import 'package:my_first_app/data/models/feature_item.dart';
 import 'package:my_first_app/data/models/newsletter_block.dart';
 import 'package:my_first_app/data/models/product.dart';
 import 'package:my_first_app/data/models/promo_banner.dart';
+import 'package:my_first_app/data/models/shipping_settings.dart';
 import 'package:my_first_app/data/models/whatsapp_chat_config.dart';
+import 'package:my_first_app/features/home/widgets/flash_deal_banner.dart';
+import 'package:my_first_app/shared/utils/product_sort.dart';
 
 class CatalogStore extends ChangeNotifier {
   CatalogStore._();
   static final CatalogStore instance = CatalogStore._();
 
+  static const int recommendedHomeMax = 20;
+
   final _api = WowKidzApi.instance;
 
   bool isLoading = false;
   bool isRefreshing = false;
+  bool isBootstrapping = false;
+  bool bootstrapComplete = false;
   bool apiEnabled = false;
   String? error;
 
@@ -27,6 +34,8 @@ class CatalogStore extends ChangeNotifier {
   String tagline = 'Shop Smart, Live Better';
   String? logoUrl;
   String? faviconUrl;
+  String? preloaderUrl;
+  bool guestCheckoutEnabled = true;
 
   List<FeatureItem> features = [];
   List<CategoryItem> categories = [];
@@ -48,6 +57,7 @@ class CatalogStore extends ChangeNotifier {
         'Subscribe to our newsletter for early discount offers, latest news & promos.',
   );
   WhatsAppChatConfig whatsapp = const WhatsAppChatConfig();
+  ShippingSettings shippingSettings = const ShippingSettings();
 
   String flashDealTitle = 'Flash Deal';
   String hotCollectionTitle = 'Hot Collection';
@@ -55,6 +65,21 @@ class CatalogStore extends ChangeNotifier {
   String recommendedTitle = 'Recommended';
   String campaignTitle = 'Campaign Offer';
   String? campaignEndDate;
+  String? flashDealEndDate;
+
+  DateTime? get effectiveFlashDealEndDate =>
+      resolveFlashDealEndDate(flashDealEndDate, flashDeals);
+
+  /// Up to [recommendedHomeMax] recommended products for the home grid.
+  List<Product> get recommendedForHome {
+    final byId = <String, Product>{};
+    for (final product in [...allRecommended, ...recommended]) {
+      byId[product.id] = product;
+    }
+    return sortProductsStockFirst(byId.values.toList())
+        .take(recommendedHomeMax)
+        .toList();
+  }
   bool showCampaign = true;
   bool showHotCollection = true;
 
@@ -85,6 +110,59 @@ class CatalogStore extends ChangeNotifier {
       return List.unmodifiable(_productsByCategory[categoryName]!);
     }
     return allProducts.where((p) => p.category == categoryName).toList();
+  }
+
+  Future<void> bootstrap() async {
+    if (bootstrapComplete || isBootstrapping) return;
+
+    isBootstrapping = true;
+    isLoading = true;
+    error = null;
+    notifyListeners();
+
+    final minEnd = DateTime.now().add(const Duration(milliseconds: 2500));
+
+    try {
+      final status = await _api.getMobileStatus();
+      apiEnabled = readBool(status['mobile_api_enabled'], false);
+      _applyBranding(status);
+      _applyWhatsapp(status['whatsapp']);
+      notifyListeners();
+
+      if (!apiEnabled) {
+        error =
+            'Mobile App API is disabled. Enable it from Admin → Manage Site → Mobile App API.';
+      } else {
+        try {
+          await _loadFromHomeEndpoint();
+        } on ApiException catch (e) {
+          if (e.statusCode == 403 &&
+              e.message.toLowerCase().contains('disabled')) {
+            apiEnabled = false;
+            error = e.message;
+          } else {
+            await _loadFromSeparateEndpoints();
+          }
+        }
+      }
+    } catch (e) {
+      error = e.toString();
+      try {
+        await _loadFromSeparateEndpoints();
+      } catch (_) {}
+    } finally {
+      isLoading = false;
+      isRefreshing = false;
+    }
+
+    final wait = minEnd.difference(DateTime.now());
+    if (wait > Duration.zero) {
+      await Future<void>.delayed(wait);
+    }
+
+    bootstrapComplete = true;
+    isBootstrapping = false;
+    notifyListeners();
   }
 
   Future<void> loadHome({bool refresh = false}) async {
@@ -150,7 +228,19 @@ class CatalogStore extends ChangeNotifier {
     _applySliders(map['sliders'] ?? map['slider_banners']);
     _applySideBanners(map['side_banners'] ?? map['banners']);
     _applyCategories(map['categories']);
-    _applySections(map['sections'] ?? map);
+    _applySections(asJsonMap(map['sections'] ?? map));
+    if (recommended.isEmpty) {
+      recommended = _parseProducts(map['recommended']);
+    }
+    if (allRecommended.isEmpty) {
+      allRecommended = _parseProducts(
+        map['all_recommended'] ?? map['recommended_all'] ?? recommended,
+      );
+    }
+    if (allRecommended.isEmpty && recommended.isNotEmpty) {
+      allRecommended = recommended;
+    }
+    await _ensureRecommendedLoaded();
     _applyPromotions(map);
     _applyWhatsapp(map['whatsapp']);
     notifyListeners();
@@ -199,8 +289,27 @@ class CatalogStore extends ChangeNotifier {
     bool viewAll = false,
   }) async {
     final list = await _api.getProducts(
-      section: section,
-      perPage: viewAll ? 50 : 12,
+      section: sectionApiKey(section),
+      perPage: viewAll ? 100 : 20,
+    );
+    return _parseProducts(list);
+  }
+
+  static const _sectionApiKeys = {
+    'flash_deal': 'flash_deal',
+    'hot_collection': 'hot_collection',
+    'new_arrival': 'new_arrivals',
+    'recommended': 'recommended_products',
+    'campaign': 'campaign',
+  };
+
+  static String sectionApiKey(String section) =>
+      _sectionApiKeys[section] ?? section;
+
+  Future<List<Product>> fetchSectionProducts(String section) async {
+    final list = await _api.getProducts(
+      section: sectionApiKey(section),
+      perPage: 100,
     );
     return _parseProducts(list);
   }
@@ -208,6 +317,11 @@ class CatalogStore extends ChangeNotifier {
   void _applySettings(Map<String, dynamic> map) {
     _applyBranding(map);
     _applyWhatsapp(map['whatsapp']);
+    _applyShipping(map);
+  }
+
+  void _applyShipping(Map<String, dynamic> map) {
+    shippingSettings = ShippingSettings.fromJson(map);
   }
 
   void _applyWhatsapp(dynamic raw) {
@@ -222,6 +336,20 @@ class CatalogStore extends ChangeNotifier {
     logoUrl = readNullableString(map['logo_url'] ?? map['logo']) ?? logoUrl;
     faviconUrl =
         readNullableString(map['favicon_url'] ?? map['favicon']) ?? faviconUrl;
+    preloaderUrl = readNullableString(
+      map['preloader_url'] ??
+          map['preloader'] ??
+          map['preloader_image'] ??
+          map['loader'],
+    ) ??
+        (readBool(map['is_preloader_enabled'], true)
+            ? readNullableString(map['logo_url'] ?? map['logo'])
+            : null) ??
+        preloaderUrl;
+    guestCheckoutEnabled = readBool(
+      map['is_guest_checkout'] ?? map['guest_checkout_enabled'],
+      guestCheckoutEnabled,
+    );
   }
 
   void _applyFeatures(dynamic raw) {
@@ -255,7 +383,7 @@ class CatalogStore extends ChangeNotifier {
   }
 
   void _applySections(Map<String, dynamic> map) {
-    flashDeals = _parseProducts(
+    _applyFlashDealSection(
       map['flash_deal'] ?? map['flash_deals'] ?? map['flashDeals'],
     );
     hotCollection = _parseProducts(
@@ -264,15 +392,50 @@ class CatalogStore extends ChangeNotifier {
     newArrivals = _parseProducts(
       map['new_arrival'] ?? map['new_arrivals'] ?? map['newArrivals'],
     );
-    recommended = _parseProducts(map['recommended']);
-    campaignProducts = _parseProducts(map['campaign']);
+    _applyRecommendedSection(map['recommended']);
     allNewArrivals = _parseProducts(
       map['all_new_arrivals'] ?? map['new_arrival_all'] ?? newArrivals,
     );
     allRecommended = _parseProducts(
       map['all_recommended'] ?? map['recommended_all'] ?? recommended,
     );
+    if (allRecommended.isEmpty && recommended.isNotEmpty) {
+      allRecommended = recommended;
+    }
     campaignProducts = _parseProducts(map['campaign']);
+  }
+
+  void _applyRecommendedSection(dynamic raw) {
+    if (raw is Map) {
+      final map = asJsonMap(raw);
+      recommended = _parseProducts(map['products'] ?? map['items']);
+      return;
+    }
+    recommended = _parseProducts(raw);
+  }
+
+  Future<void> _ensureRecommendedLoaded() async {
+    if (recommendedForHome.isNotEmpty) return;
+    try {
+      final fromApi = await _loadProductSection('recommended', viewAll: true);
+      if (fromApi.isEmpty) return;
+      allRecommended = fromApi;
+      recommended = fromApi.take(recommendedHomeMax).toList();
+    } catch (_) {}
+  }
+
+  void _applyFlashDealSection(dynamic raw) {
+    if (raw is Map) {
+      final map = asJsonMap(raw);
+      flashDealTitle = readString(map['title'], flashDealTitle);
+      flashDealEndDate = readNullableString(
+        map['end_date'] ?? map['ends_at'] ?? map['endDate'],
+      );
+      flashDeals = _parseProducts(map['products'] ?? map['items']);
+      return;
+    }
+
+    flashDeals = _parseProducts(raw);
   }
 
   void _applyPromotions(Map<String, dynamic> map) {
@@ -322,6 +485,11 @@ class CatalogStore extends ChangeNotifier {
     recommendedTitle = readString(labels['recommended'], recommendedTitle);
     campaignTitle = readString(labels['campaign'], campaignTitle);
 
+    final sectionDates = asJsonMap(map['section_end_dates']);
+    flashDealEndDate ??= readNullableString(
+      sectionDates['flash_deal'] ?? sectionDates['flash_deals'],
+    );
+
     final visibility = asJsonMap(map['section_visibility']);
     showCampaign = readBool(visibility['campaign'], showCampaign);
     showHotCollection = readBool(visibility['hot_collection'], showHotCollection);
@@ -329,10 +497,14 @@ class CatalogStore extends ChangeNotifier {
 
   List<Product> _parseProducts(dynamic raw) {
     final list = asJsonList(raw);
-    final products =
-        list.map((e) => Product.fromJson(asJsonMap(e))).toList();
+    final products = <Product>[];
+    for (final entry in list) {
+      try {
+        products.add(Product.fromJson(asJsonMap(entry)));
+      } catch (_) {}
+    }
     _cacheProducts(products);
-    return products;
+    return sortProductsStockFirst(products);
   }
 
   void _cacheProducts(List<Product> products) {
@@ -376,9 +548,48 @@ class CatalogStore extends ChangeNotifier {
     }
   }
 
-  Future<List<Product>> searchProducts(String query) async {
+  Future<List<Product>> enrichProductsWithVariants(List<Product> products) async {
+    if (products.isEmpty) return products;
+
+    final enriched = await Future.wait(
+      products.map((product) async {
+        if (!product.needsVariantSelection ||
+            (product.sizes.isNotEmpty || product.colors.isNotEmpty)) {
+          return product;
+        }
+        final detail = await fetchProductDetail(product.id);
+        return detail ?? product;
+      }),
+    );
+
+    return enriched;
+  }
+
+  Future<List<Product>> searchProducts(String query, {int perPage = 40}) async {
     if (query.trim().isEmpty) return [];
-    final list = await _api.getProducts(search: query.trim(), perPage: 40);
+    final list = await _api.getProducts(
+      search: query.trim(),
+      perPage: perPage,
+    );
+    return _parseProducts(list);
+  }
+
+  Future<List<Product>> searchSuggestions(String query, {int limit = 10}) async {
+    if (query.trim().isEmpty) return [];
+    try {
+      final list = await _api.getSearchSuggestions(
+        query: query.trim(),
+        limit: limit,
+      );
+      return _parseProducts(list);
+    } on ApiException {
+      return searchProducts(query, perPage: limit);
+    }
+  }
+
+  Future<List<Product>> searchProductsByImage(String filePath) async {
+    final list = await _api.searchProductsByImage(filePath);
+    if (list.isEmpty) return [];
     return _parseProducts(list);
   }
 }

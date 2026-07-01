@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
+import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
+import 'package:my_first_app/data/models/saved_address.dart';
+import 'package:my_first_app/data/models/shipping_settings.dart';
 import 'package:my_first_app/features/checkout/pages/order_success_page.dart';
+import 'package:my_first_app/features/dashboard/pages/address_form_page.dart';
+import 'package:my_first_app/shared/utils/cart_auth.dart';
 import 'package:my_first_app/shared/utils/cart_snackbar.dart';
 import 'package:my_first_app/shared/widgets/order_summary_card.dart';
 
@@ -20,11 +25,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final _cityController = TextEditingController(text: 'Dhaka');
   String _paymentMethod = 'cod';
   bool _isPlacingOrder = false;
+  bool _loadingAddresses = false;
+  String? _selectedAddressId;
 
   @override
   void initState() {
     super.initState();
-    _prefillShipping();
+    AppController.instance.ensureDefaultShippingOption();
+    _bootstrapCheckout();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -33,6 +41,70 @@ class _CheckoutPageState extends State<CheckoutPage> {
         showCartMessage(context, 'Your cart is empty. Add items first.');
       }
     });
+  }
+
+  Future<void> _bootstrapCheckout() async {
+    final controller = AppController.instance;
+    final catalog = CatalogStore.instance;
+
+    if (!catalog.guestCheckoutEnabled && !controller.isLoggedIn) {
+      if (!mounted) return;
+      final allowed = await ensureCheckoutAccess(context);
+      if (!allowed && mounted) {
+        Navigator.pop(context);
+      }
+      return;
+    }
+
+    if (controller.isLoggedIn) {
+      setState(() => _loadingAddresses = true);
+      await controller.loadCustomerData();
+      if (!mounted) return;
+      setState(() => _loadingAddresses = false);
+      _selectDefaultAddress(controller);
+    } else {
+      _prefillShipping();
+    }
+  }
+
+  void _selectDefaultAddress(AppController controller) {
+    if (controller.addresses.isEmpty) {
+      _prefillShipping();
+      return;
+    }
+
+    SavedAddress? selected;
+    if (_selectedAddressId != null) {
+      selected = controller.addresses
+          .where((a) => a.id == _selectedAddressId)
+          .firstOrNull;
+    }
+    selected ??= controller.addresses.where((a) => a.isDefault).firstOrNull;
+    selected ??= controller.addresses.first;
+
+    _selectedAddressId = selected.id;
+    _applyAddress(selected);
+  }
+
+  void _applyAddress(SavedAddress address) {
+    _nameController.text = address.fullName;
+    _phoneController.text = address.phone;
+    _addressController.text = address.addressLine;
+    _cityController.text = address.city;
+  }
+
+  Future<void> _addAnotherAddress() async {
+    final newId = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const AddressFormPage()),
+    );
+    if (!mounted || newId == null) return;
+
+    await AppController.instance.loadCustomerData();
+    if (!mounted) return;
+
+    setState(() => _selectedAddressId = newId);
+    _selectDefaultAddress(AppController.instance);
   }
 
   @override
@@ -92,6 +164,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           orderId: order.id,
           total: order.total,
           paymentMethod: order.paymentMethod,
+          paymentStatus: order.paymentStatus,
         ),
       ),
     );
@@ -109,6 +182,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   Widget build(BuildContext context) {
     final controller = AppController.instance;
+    final shippingOptions = controller.shippingSettings.options;
 
     return ListenableBuilder(
       listenable: controller,
@@ -125,7 +199,171 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   title: 'Shipping Address',
                   icon: Icons.location_on_outlined,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (_loadingAddresses)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        )
+                      else if (controller.isLoggedIn &&
+                          controller.addresses.isNotEmpty) ...[
+                        ...controller.addresses.map((address) {
+                          final selected = _selectedAddressId == address.id;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: InkWell(
+                              onTap: () {
+                                setState(() => _selectedAddressId = address.id);
+                                _applyAddress(address);
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: selected
+                                        ? AppColors.primary
+                                        : AppColors.border,
+                                    width: selected ? 1.5 : 1,
+                                  ),
+                                  color: selected
+                                      ? AppColors.primary.withValues(alpha: 0.05)
+                                      : Colors.transparent,
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Radio<String>(
+                                      value: address.id,
+                                      groupValue: _selectedAddressId,
+                                      onChanged: (value) {
+                                        if (value == null) return;
+                                        setState(() => _selectedAddressId = value);
+                                        _applyAddress(address);
+                                      },
+                                      activeColor: AppColors.primary,
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                address.label,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelLarge
+                                                    ?.copyWith(
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
+                                              ),
+                                              if (address.isDefault) ...[
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.success
+                                                        .withValues(alpha: 0.12),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            999),
+                                                  ),
+                                                  child: const Text(
+                                                    'Default',
+                                                    style: TextStyle(
+                                                      color: AppColors.success,
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            address.fullName,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            address.phone,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            address.fullAddress,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: AppColors.textSecondary,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                        OutlinedButton.icon(
+                          onPressed: _addAnotherAddress,
+                          icon: const Icon(Icons.add_location_alt_outlined),
+                          label: const Text('Add Another Address'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Delivery details',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                        const SizedBox(height: 8),
+                      ] else if (controller.isLoggedIn) ...[
+                        Text(
+                          'No saved address yet. Add one to continue faster.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                        ),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: _addAnotherAddress,
+                          icon: const Icon(Icons.add_location_alt_outlined),
+                          label: const Text('Add Address'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       _InputField(
                         controller: _nameController,
                         label: 'Full Name',
@@ -162,6 +400,23 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 16),
+                _SectionCard(
+                  title: 'Delivery Area',
+                  icon: Icons.local_shipping_outlined,
+                  child: shippingOptions.isEmpty
+                      ? Text(
+                          'Shipping options will load from the store settings.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        )
+                      : _ShippingOptionsSelector(
+                          options: shippingOptions,
+                          selectedId: controller.selectedShippingId,
+                          formatPrice: controller.formatPrice,
+                          freeShipping: controller.qualifiesForFreeShipping,
+                          onChanged: controller.setShippingOption,
+                        ),
                 ),
                 const SizedBox(height: 16),
                 _SectionCard(
@@ -320,8 +575,113 @@ class _InputField extends StatelessWidget {
         labelText: label,
         prefixIcon: Icon(icon, size: 20),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       ),
+    );
+  }
+}
+
+class _ShippingOptionsSelector extends StatelessWidget {
+  const _ShippingOptionsSelector({
+    required this.options,
+    required this.selectedId,
+    required this.formatPrice,
+    required this.freeShipping,
+    required this.onChanged,
+  });
+
+  final List<ShippingOption> options;
+  final String? selectedId;
+  final String Function(double) formatPrice;
+  final bool freeShipping;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        if (freeShipping)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
+            ),
+            child: Text(
+              'Free shipping applied to this order',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+        ...options.map((option) {
+          final selected = selectedId == option.id;
+          final priceLabel =
+              freeShipping ? 'FREE' : formatPrice(option.price);
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: InkWell(
+              onTap: () => onChanged(option.id),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: selected ? AppColors.primary : AppColors.border,
+                    width: selected ? 1.5 : 1,
+                  ),
+                  color: selected
+                      ? AppColors.primary.withValues(alpha: 0.05)
+                      : Colors.transparent,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.local_shipping_outlined,
+                      color: selected ? AppColors.primary : AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        option.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: selected
+                              ? AppColors.primary
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      priceLabel,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: freeShipping
+                            ? AppColors.success
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Radio<String>(
+                      value: option.id,
+                      groupValue: selectedId,
+                      onChanged: (value) => onChanged(value),
+                      activeColor: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 }

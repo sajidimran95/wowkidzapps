@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/models/cart_item.dart';
+import 'package:my_first_app/shared/utils/cart_auth.dart';
 import 'package:my_first_app/features/checkout/pages/checkout_page.dart';
 import 'package:my_first_app/shared/widgets/empty_state.dart';
+import 'package:my_first_app/shared/widgets/free_shipping_progress.dart';
 import 'package:my_first_app/shared/widgets/order_summary_card.dart';
 
 class CartPage extends StatefulWidget {
@@ -15,22 +17,22 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  final _promoController = TextEditingController();
-  String? _promoMessage;
+  final _couponController = TextEditingController();
+  String? _couponMessage;
 
   @override
   void dispose() {
-    _promoController.dispose();
+    _couponController.dispose();
     super.dispose();
   }
 
-  Future<void> _applyPromo(AppController controller) async {
-    final applied = await controller.applyPromo(_promoController.text);
+  Future<void> _applyCoupon(AppController controller) async {
+    final applied = await controller.applyPromo(_couponController.text);
     if (!mounted) return;
     setState(() {
-      _promoMessage = applied
-          ? 'Promo code applied! 5% discount'
-          : 'Invalid promo code';
+      _couponMessage = applied
+          ? 'Coupon applied! 5% discount'
+          : 'Invalid coupon code';
     });
   }
 
@@ -79,11 +81,11 @@ class _CartPageState extends State<CartPage> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(24),
+                    top: Radius.circular(20),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -97,65 +99,105 @@ class _CartPageState extends State<CartPage> {
                   top: false,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      Text(
+                        'Coupon Code',
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
                           Expanded(
                             child: TextField(
-                              controller: _promoController,
+                              controller: _couponController,
                               decoration: InputDecoration(
-                                hintText: 'Promo code (WOWKIDZ)',
+                                hintText: 'Enter coupon (e.g. WOWKIDZ)',
                                 isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
+                                  horizontal: 12,
+                                  vertical: 10,
                                 ),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           OutlinedButton(
-                            onPressed: () => _applyPromo(controller),
+                            onPressed: () => _applyCoupon(controller),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
                             child: const Text('Apply'),
                           ),
                         ],
                       ),
-                      if (_promoMessage != null) ...[
-                        const SizedBox(height: 6),
+                      if (_couponMessage != null) ...[
+                        const SizedBox(height: 4),
                         Text(
-                          _promoMessage!,
+                          _couponMessage!,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             color: controller.promoApplied
                                 ? AppColors.success
                                 : AppColors.discount,
                           ),
                         ),
                       ],
-                      const SizedBox(height: 12),
-                      OrderSummaryCard(
+                      if (controller.shippingSettings.freeShippingEnabled) ...[
+                        const SizedBox(height: 8),
+                        FreeShippingProgressBanner(
                         subtotal: controller.subtotal,
-                        shipping: controller.shipping,
-                        discount: controller.discount,
-                        total: controller.total,
+                        freeShippingMinimum:
+                            controller.shippingSettings.freeShippingMinimum,
+                        remaining: controller.freeShippingRemaining,
+                        qualifies: controller.qualifiesForFreeShipping,
                         formatPrice: controller.formatPrice,
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
+                      ],
+                      OrderSummaryCard(
+                        subtotal: controller.subtotal,
+                        shipping: controller.qualifiesForFreeShipping
+                            ? 0
+                            : controller.shippingSettings.dhakaRate,
+                        shippingLabel: controller.qualifiesForFreeShipping
+                            ? null
+                            : 'At checkout',
+                        discount: controller.discount,
+                        total: controller.cartTotal,
+                        formatPrice: controller.formatPrice,
+                        compact: true,
+                      ),
+                      const SizedBox(height: 8),
                       ElevatedButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const CheckoutPage(),
-                          ),
-                        ),
+                        onPressed: () async {
+                          if (!await ensureCheckoutAccess(context)) return;
+                          if (!context.mounted) return;
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CheckoutPage(),
+                            ),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                         child: Text(
-                          'Proceed to Checkout • ${controller.formatPrice(controller.total)}',
+                          'Proceed to Checkout • ${controller.formatPrice(controller.cartTotal)}',
+                          style: const TextStyle(fontSize: 14),
                         ),
                       ),
                     ],

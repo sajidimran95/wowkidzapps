@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:my_first_app/core/config/api_config.dart';
 import 'package:my_first_app/core/network/api_client.dart';
 import 'package:my_first_app/core/network/json_utils.dart';
@@ -5,6 +6,7 @@ import 'package:my_first_app/data/models/customer_order.dart';
 import 'package:my_first_app/data/models/payment_session.dart';
 import 'package:my_first_app/data/models/product.dart';
 import 'package:my_first_app/data/models/saved_address.dart';
+import 'package:my_first_app/data/models/shipping_settings.dart';
 import 'package:my_first_app/data/models/support_ticket.dart';
 
 class WowKidzApi {
@@ -78,6 +80,46 @@ class WowKidzApi {
     };
     final json = await _client.get(ApiConfig.products, queryParameters: query);
     return _client.asList(json);
+  }
+
+  Future<List<dynamic>> getSearchSuggestions({
+    required String query,
+    int limit = 10,
+    String? categoryId,
+  }) async {
+    final json = await _client.get(
+      ApiConfig.searchSuggest,
+      queryParameters: {
+        'q': query.trim(),
+        'limit': limit,
+        if (categoryId != null) 'category_id': categoryId,
+      },
+    );
+    return _client.asList(json);
+  }
+
+  Future<List<dynamic>> searchProductsByImage(String filePath) async {
+    final formData = FormData.fromMap({
+      'image': await MultipartFile.fromFile(
+        filePath,
+        filename: 'search.jpg',
+      ),
+    });
+
+    final paths = [
+      ApiConfig.imageSearch,
+      '/search/image',
+      '/products/search-by-image',
+    ];
+
+    for (final path in paths) {
+      try {
+        final json = await _client.postMultipart(path, formData: formData);
+        return _client.asList(json);
+      } catch (_) {}
+    }
+
+    return [];
   }
 
   Future<Product> getProduct(String id) async {
@@ -186,6 +228,8 @@ class WowKidzApi {
     required String city,
     required String paymentMethod,
     String? promoCode,
+    String? shippingId,
+    double? shippingCharge,
   }) async {
     final json = await _client.post(
       ApiConfig.orders,
@@ -196,6 +240,9 @@ class WowKidzApi {
           'phone': phone,
           'address': address,
           'city': city,
+          if (shippingId != null && shippingId.isNotEmpty)
+            'shipping_id': shippingId,
+          if (shippingCharge != null) 'shipping_charge': shippingCharge,
         },
         'payment_method': paymentMethod,
         if (promoCode != null && promoCode.isNotEmpty) 'promo_code': promoCode,
@@ -289,6 +336,26 @@ class WowKidzApi {
     );
     final map = _client.asMap(json);
     return readBool(map['valid'] ?? map['success'], false);
+  }
+
+  Future<ShippingSettings> getShippingSettings() async {
+    final json = await _client.get(ApiConfig.shipping);
+    return ShippingSettings.fromJson(_client.asMap(json));
+  }
+
+  Future<ShippingQuote> calculateShipping({
+    required double subtotal,
+    String? shippingId,
+  }) async {
+    final json = await _client.post(
+      ApiConfig.shippingCalculate,
+      data: {
+        'subtotal': subtotal,
+        if (shippingId != null && shippingId.isNotEmpty)
+          'shipping_id': shippingId,
+      },
+    );
+    return ShippingQuote.fromJson(_client.asMap(json));
   }
 
   Future<void> subscribeNewsletter(String email) async {

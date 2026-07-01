@@ -5,6 +5,7 @@ import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/features/cart/pages/cart_page.dart';
 import 'package:my_first_app/features/category/pages/category_page.dart';
 import 'package:my_first_app/features/home/pages/home_page.dart';
+import 'package:my_first_app/features/search/pages/search_results_page.dart';
 import 'package:my_first_app/features/auth/pages/login_page.dart';
 import 'package:my_first_app/features/dashboard/pages/addresses_page.dart';
 import 'package:my_first_app/features/dashboard/pages/customer_dashboard_page.dart';
@@ -32,33 +33,43 @@ class _MainShellState extends State<MainShell> {
             index: _controller.selectedTab,
             children: const [
               HomePage(),
+              SearchResultsPage(query: ''),
               CategoryPage(),
               CartPage(),
               _AccountPage(),
             ],
           ),
           bottomNavigationBar: BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
             currentIndex: _controller.selectedTab,
             onTap: _controller.selectTab,
+            selectedItemColor: AppColors.primary,
+            unselectedItemColor: AppColors.textMuted,
             items: [
               const BottomNavigationBarItem(
                 icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
+                activeIcon: Icon(Icons.home, color: AppColors.primary),
                 label: 'Home',
               ),
               const BottomNavigationBarItem(
+                icon: Icon(Icons.search_outlined),
+                activeIcon: Icon(Icons.search, color: AppColors.primary),
+                label: 'Search',
+              ),
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.grid_view_outlined),
-                activeIcon: Icon(Icons.grid_view),
+                activeIcon: Icon(Icons.grid_view, color: AppColors.primary),
                 label: 'Category',
               ),
               BottomNavigationBarItem(
                 icon: _CartIcon(count: _controller.cartCount),
-                activeIcon: _CartIcon(count: _controller.cartCount, active: true),
+                activeIcon:
+                    _CartIcon(count: _controller.cartCount, active: true),
                 label: 'Cart',
               ),
               const BottomNavigationBarItem(
                 icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
+                activeIcon: Icon(Icons.person, color: AppColors.primary),
                 label: 'Account',
               ),
             ],

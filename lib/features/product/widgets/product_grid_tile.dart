@@ -14,6 +14,18 @@ class ProductGridTile extends StatelessWidget {
   final Product product;
   final VoidCallback? onAddToCart;
 
+  static ButtonStyle get _outOfStockStyle => OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        minimumSize: const Size(0, 30),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        disabledForegroundColor: AppColors.textMuted,
+        side: const BorderSide(color: AppColors.border),
+        textStyle: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -65,16 +77,26 @@ class ProductGridTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (!product.inStock)
+                  if (!product.isPurchasable)
                     Container(
                       color: Colors.black.withValues(alpha: 0.3),
                       alignment: Alignment.center,
-                      child: const Text(
-                        'Out of Stock',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'Out of Stock',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10,
+                          ),
                         ),
                       ),
                     ),
@@ -98,28 +120,37 @@ class ProductGridTile extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Text(
-                        product.formattedSalePrice,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                            ),
+                      Flexible(
+                        child: Text(
+                          product.formattedSalePrice,
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        product.formattedOriginalPrice,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.textMuted,
-                              decoration: TextDecoration.lineThrough,
-                            ),
+                      Flexible(
+                        child: Text(
+                          product.formattedOriginalPrice,
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: AppColors.textMuted,
+                                    decoration: TextDecoration.lineThrough,
+                                    fontSize: 10,
+                                  ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
-                    height: 32,
-                    child: product.inStock
+                    height: 30,
+                    child: product.isPurchasable
                         ? ElevatedButton(
                             onPressed: () {
                               onAddToCart?.call();
@@ -130,9 +161,13 @@ class ProductGridTile extends StatelessWidget {
                             ),
                             child: const Text('Add to Cart'),
                           )
-                        : const OutlinedButton(
+                        : OutlinedButton(
                             onPressed: null,
-                            child: Text('Out of Stock'),
+                            style: _outOfStockStyle,
+                            child: const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Out of Stock'),
+                            ),
                           ),
                   ),
                 ],

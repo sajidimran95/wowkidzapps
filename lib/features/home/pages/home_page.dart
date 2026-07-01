@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/features/home/widgets/announcement_top_bar.dart';
+import 'package:my_first_app/features/home/widgets/flash_deal_banner.dart';
 import 'package:my_first_app/features/home/widgets/category_grid.dart';
 import 'package:my_first_app/features/home/widgets/feature_strip.dart';
 import 'package:my_first_app/features/home/widgets/home_app_bar.dart';
 import 'package:my_first_app/features/home/widgets/newsletter_banner.dart';
 import 'package:my_first_app/features/home/widgets/product_section.dart';
 import 'package:my_first_app/features/home/widgets/promo_banner_carousel.dart';
+import 'package:my_first_app/features/home/widgets/recommended_product_grid.dart';
 import 'package:my_first_app/features/home/widgets/website_popup_overlay.dart';
+import 'package:my_first_app/features/search/pages/search_results_page.dart';
 import 'package:my_first_app/shared/widgets/api_state_views.dart';
 
 class HomePage extends StatefulWidget {
@@ -28,16 +31,27 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _openSearch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SearchResultsPage(query: ''),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: _catalog,
       builder: (context, _) {
         if (_catalog.isLoading && !_catalog.hasData) {
-          return const CustomScrollView(
+          return CustomScrollView(
             slivers: [
-              HomeAppBar(),
-              SliverFillRemaining(child: ApiLoadingView(message: 'Loading store...')),
+              HomeAppBar(onSearchTap: _openSearch),
+              const SliverFillRemaining(
+                child: ApiLoadingView(message: 'Loading store...'),
+              ),
             ],
           );
         }
@@ -45,7 +59,7 @@ class _HomePageState extends State<HomePage> {
         if (_catalog.error != null && !_catalog.hasData) {
           return CustomScrollView(
             slivers: [
-              const HomeAppBar(),
+              HomeAppBar(onSearchTap: _openSearch),
               SliverFillRemaining(
                 child: ApiErrorView(
                   message: _catalog.error!,
@@ -62,7 +76,7 @@ class _HomePageState extends State<HomePage> {
               onRefresh: () => _catalog.loadHome(refresh: true),
               child: CustomScrollView(
                 slivers: [
-                  const HomeAppBar(),
+                  HomeAppBar(onSearchTap: _openSearch),
                   if (_catalog.announcementBar != null)
                     SliverToBoxAdapter(
                       child: AnnouncementTopBar(bar: _catalog.announcementBar!),
@@ -83,36 +97,35 @@ class _HomePageState extends State<HomePage> {
                             title: _catalog.campaignTitle,
                             products: _catalog.campaignProducts,
                             isFlashDeal: true,
+                            sectionKey: 'campaign',
+                            endDate: parseSectionEndDate(_catalog.campaignEndDate),
                           ),
                         if (_catalog.flashDeals.isNotEmpty)
                           ProductSection(
                             title: _catalog.flashDealTitle,
                             products: _catalog.flashDeals,
                             isFlashDeal: true,
+                            sectionKey: 'flash_deal',
+                            endDate: _catalog.effectiveFlashDealEndDate,
                           ),
                         if (_catalog.showHotCollection &&
                             _catalog.hotCollection.isNotEmpty)
                           ProductSection(
                             title: _catalog.hotCollectionTitle,
                             products: _catalog.hotCollection,
+                            sectionKey: 'hot_collection',
                           ),
                         if (_catalog.newArrivals.isNotEmpty)
                           ProductSection(
                             title: _catalog.newArrivalTitle,
                             products: _catalog.newArrivals,
-                            viewAllProducts: _catalog.allNewArrivals.isNotEmpty
-                                ? _catalog.allNewArrivals
-                                : _catalog.newArrivals,
-                            showViewAll: true,
+                            sectionKey: 'new_arrival',
                           ),
-                        if (_catalog.recommended.isNotEmpty)
-                          ProductSection(
+                        if (_catalog.recommendedForHome.isNotEmpty)
+                          RecommendedProductGrid(
                             title: _catalog.recommendedTitle,
-                            products: _catalog.recommended,
-                            viewAllProducts: _catalog.allRecommended.isNotEmpty
-                                ? _catalog.allRecommended
-                                : _catalog.recommended,
-                            showViewAll: true,
+                            products: _catalog.recommendedForHome,
+                            sectionKey: 'recommended',
                           ),
                         NewsletterBanner(block: _catalog.newsletter),
                       ],

@@ -5,7 +5,11 @@ import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/services/whatsapp_launcher.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/data/models/product.dart';
+import 'package:my_first_app/features/auth/pages/login_page.dart';
+import 'package:my_first_app/shared/utils/cart_auth.dart';
 import 'package:my_first_app/shared/utils/cart_snackbar.dart';
+import 'package:my_first_app/features/product/widgets/product_variant_chips.dart';
+import 'package:my_first_app/shared/utils/product_share.dart';
 
 class ProductDetailPage extends StatefulWidget {
   const ProductDetailPage({super.key, required this.product});
@@ -17,17 +21,40 @@ class ProductDetailPage extends StatefulWidget {
 }
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
-  late String _selectedSize;
+  late Product _product;
+  String? _selectedSize;
+  String? _selectedColor;
   int _quantity = 1;
   int _imageIndex = 0;
+  bool _loadingDetail = false;
   final _pageController = PageController();
-
-  Product get product => widget.product;
 
   @override
   void initState() {
     super.initState();
-    _selectedSize = product.sizes.first;
+    _product = widget.product;
+    _applySelections(_product);
+    _loadDetail();
+  }
+
+  void _applySelections(Product product) {
+    _selectedSize = ProductSelectionDefaults.firstSize(product);
+    _selectedColor = ProductSelectionDefaults.firstColor(product);
+  }
+
+  Future<void> _loadDetail() async {
+    setState(() => _loadingDetail = true);
+    final detail =
+        await CatalogStore.instance.fetchProductDetail(_product.id);
+    if (!mounted) return;
+
+    setState(() {
+      _loadingDetail = false;
+      if (detail != null) {
+        _product = detail;
+        _applySelections(_product);
+      }
+    });
   }
 
   @override
@@ -36,19 +63,35 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     super.dispose();
   }
 
-  void _addToCart() {
+  String get _cartSize => _selectedSize ?? _product.defaultSize;
+
+  bool get _canPurchase => ProductSelectionDefaults.canAddToCart(
+        _product,
+        size: _selectedSize,
+        color: _selectedColor,
+      );
+
+  Future<void> _addToCart() async {
+    if (!_canPurchase) return;
+    if (!await ensureCartAccess(context)) return;
+    if (!mounted) return;
+
     AppController.instance.addToCart(
-      product,
-      size: _selectedSize,
+      _product,
+      size: _cartSize,
       quantity: _quantity,
     );
-    showAddedToCartSnackBar(context, product.name);
+    showAddedToCartSnackBar(context, _product.name);
   }
 
-  void _buyNow() {
+  Future<void> _buyNow() async {
+    if (!_canPurchase) return;
+    if (!await ensureCartAccess(context)) return;
+    if (!mounted) return;
+
     AppController.instance.addToCart(
-      product,
-      size: _selectedSize,
+      _product,
+      size: _cartSize,
       quantity: _quantity,
     );
     AppController.instance.goToCart(context);
@@ -60,18 +103,47 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
     WhatsAppLauncher.openProductOrder(
       config: config,
-      productName: product.name,
-      priceText: product.formattedSalePrice,
-      size: _selectedSize,
+      productName: _product.name,
+      priceText: _product.formattedSalePrice,
+      size: _cartSize,
       quantity: _quantity,
-      sku: product.sku.isNotEmpty ? product.sku : null,
-      productUrl: product.productUrl.isNotEmpty ? product.productUrl : null,
+      sku: _product.sku.isNotEmpty ? _product.sku : null,
+      productUrl:
+          _product.productUrl.isNotEmpty ? _product.productUrl : null,
+    );
+  }
+
+  Future<void> _toggleWishlist(BuildContext context, Product product) async {
+    final controller = AppController.instance;
+    if (!controller.isLoggedIn) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+      if (!context.mounted || !controller.isLoggedIn) return;
+    }
+
+    await controller.toggleWishlist(product.id);
+    if (!context.mounted) return;
+
+    final inWishlist = controller.isInWishlist(product.id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          inWishlist
+              ? '${product.name} added to wishlist'
+              : '${product.name} removed from wishlist',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final whatsapp = CatalogStore.instance.whatsapp;
+    final product = _product;
+    final shippingSettings = CatalogStore.instance.shippingSettings;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -81,8 +153,26 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             expandedHeight: 360,
             pinned: true,
             actions: [
-              IconButton(onPressed: () {}, icon: const Icon(Icons.favorite_border)),
-              IconButton(onPressed: () {}, icon: const Icon(Icons.share_outlined)),
+              ListenableBuilder(
+                listenable: AppController.instance,
+                builder: (context, _) {
+                  final inWishlist =
+                      AppController.instance.isInWishlist(product.id);
+                  return IconButton(
+                    onPressed: () => _toggleWishlist(context, product),
+                    icon: Icon(
+                      inWishlist ? Icons.favorite : Icons.favorite_border,
+                      color: inWishlist ? AppColors.primary : null,
+                    ),
+                    tooltip: inWishlist ? 'Remove from wishlist' : 'Add to wishlist',
+                  );
+                },
+              ),
+              IconButton(
+                onPressed: () => shareProduct(product),
+                icon: const Icon(Icons.share_outlined),
+                tooltip: 'Share product',
+              ),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
@@ -91,7 +181,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   PageView.builder(
                     controller: _pageController,
                     itemCount: product.allImages.length,
-                    onPageChanged: (index) => setState(() => _imageIndex = index),
+                    onPageChanged: (index) =>
+                        setState(() => _imageIndex = index),
                     itemBuilder: (_, index) => CachedNetworkImage(
                       imageUrl: product.allImages[index],
                       fit: BoxFit.cover,
@@ -134,7 +225,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -161,18 +255,20 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     children: [
                       Text(
                         product.formattedSalePrice,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w800,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w800,
+                                ),
                       ),
                       const SizedBox(width: 10),
                       Text(
                         product.formattedOriginalPrice,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: AppColors.textMuted,
-                              decoration: TextDecoration.lineThrough,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: AppColors.textMuted,
+                                  decoration: TextDecoration.lineThrough,
+                                ),
                       ),
                       const SizedBox(width: 10),
                       Container(
@@ -198,44 +294,54 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   const SizedBox(height: 16),
                   _InfoRow(
                     icon: Icons.inventory_2_outlined,
-                    label: product.inStock ? 'In Stock' : 'Out of Stock',
-                    color: product.inStock ? AppColors.success : AppColors.discount,
+                    label: product.isPurchasable ? 'In Stock' : 'Out of Stock',
+                    color: product.isPurchasable
+                        ? AppColors.success
+                        : AppColors.discount,
                   ),
                   const SizedBox(height: 8),
-                  const _InfoRow(
+                  _InfoRow(
                     icon: Icons.local_shipping_outlined,
-                    label: 'Free shipping on orders over ৳2,000',
+                    label: shippingSettings.freeShippingMessage(
+                      (value) => '৳${value.toStringAsFixed(0)}',
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const _InfoRow(
                     icon: Icons.assignment_return_outlined,
                     label: 'Easy returns within 7 days',
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Select Size',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: product.sizes.map((size) {
-                      final selected = _selectedSize == size;
-                      return ChoiceChip(
-                        label: Text(size),
-                        selected: selected,
-                        onSelected: product.inStock
-                            ? (_) => setState(() => _selectedSize = size)
-                            : null,
-                        selectedColor: AppColors.primary.withValues(alpha: 0.15),
-                        labelStyle: TextStyle(
-                          color: selected ? AppColors.primary : AppColors.textSecondary,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                  if (product.colors.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    ProductVariantChips(
+                      title: 'Select Color',
+                      options: product.colors,
+                      selected: _selectedColor,
+                      isAvailable: product.isColorInStock,
+                      onSelected: (color) =>
+                          setState(() => _selectedColor = color),
+                    ),
+                  ],
+                  if (_loadingDetail) ...[
+                    const SizedBox(height: 20),
+                    const Center(
+                      child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ] else if (product.sizes.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    ProductVariantChips(
+                      title: 'Select Size',
+                      options: product.sizes,
+                      selected: _selectedSize,
+                      isAvailable: product.isSizeInStock,
+                      onSelected: (size) =>
+                          setState(() => _selectedSize = size),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   Text(
                     'Quantity',
@@ -245,7 +351,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   _QuantityStepper(
                     quantity: _quantity,
                     onChanged: (qty) => setState(() => _quantity = qty),
-                    enabled: product.inStock,
+                    enabled: _canPurchase,
                   ),
                   const SizedBox(height: 24),
                   Text(
@@ -259,7 +365,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           height: 1.5,
                         ),
                   ),
-                  const SizedBox(height: 100),
+                  const SizedBox(height: 72),
                 ],
               ),
             ),
@@ -267,7 +373,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         ],
       ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
         decoration: BoxDecoration(
           color: AppColors.surface,
           boxShadow: [
@@ -279,49 +385,63 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ],
         ),
         child: SafeArea(
+          top: false,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (whatsapp.enabled) ...[
                 SizedBox(
                   width: double.infinity,
+                  height: 36,
                   child: OutlinedButton.icon(
                     onPressed: _orderOnWhatsApp,
-                    icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
-                    label: const Text('Order on WhatsApp'),
+                    icon: const Icon(Icons.chat, size: 16, color: Color(0xFF25D366)),
+                    label: const Text(
+                      'Order on WhatsApp',
+                      style: TextStyle(fontSize: 13),
+                    ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       side: const BorderSide(color: Color(0xFF25D366)),
                       foregroundColor: const Color(0xFF25D366),
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
               ],
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: product.inStock ? _addToCart : null,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: AppColors.primary),
-                        foregroundColor: AppColors.primary,
+              SizedBox(
+                height: 40,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _canPurchase ? _addToCart : null,
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          side: const BorderSide(color: AppColors.primary),
+                          foregroundColor: AppColors.primary,
+                        ),
+                        child: const Text(
+                          'Add to Cart',
+                          style: TextStyle(fontSize: 13),
+                        ),
                       ),
-                      child: const Text('Add to Cart'),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: product.inStock ? _buyNow : null,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _canPurchase ? _buyNow : null,
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: const Text(
+                          'Buy Now',
+                          style: TextStyle(fontSize: 13),
+                        ),
                       ),
-                      child: const Text('Buy Now'),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

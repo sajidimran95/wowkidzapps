@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:my_first_app/core/app/catalog_store.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
+import 'package:my_first_app/features/auth/widgets/auth_ui.dart';
 import 'package:my_first_app/shared/widgets/store_logo.dart';
 
 enum AuthMethod { mobile, email }
@@ -12,55 +13,25 @@ class AuthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final catalog = CatalogStore.instance;
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(8, 8, 24, 28),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
-      ),
+      color: AppColors.surface,
+      padding: const EdgeInsets.fromLTRB(4, 4, 16, 20),
       child: Column(
         children: [
           Align(
             alignment: Alignment.centerLeft,
             child: IconButton(
               onPressed: onBack,
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
             ),
           ),
-          StoreLogo(
-            size: 72,
-            borderRadius: 20,
-            fallbackIconColor: AppColors.primary,
-            padding: const EdgeInsets.all(10),
-          ),
-          const SizedBox(height: 14),
-          ListenableBuilder(
-            listenable: catalog,
-            builder: (context, _) => Column(
-              children: [
-                Text(
-                  catalog.appName,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  catalog.tagline,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
-                ),
-              ],
-            ),
+          StoreLogo.auth(
+            width: isLandscape ? 280 : 220,
+            height: 56,
           ),
         ],
       ),
@@ -190,9 +161,7 @@ class AuthInputField extends StatelessWidget {
       children: [
         Text(
           required ? '$label*' : label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: AuthTextStyles.label(context),
         ),
         const SizedBox(height: 8),
         TextFormField(
@@ -205,23 +174,45 @@ class AuthInputField extends StatelessWidget {
           enableSuggestions: !obscure,
           textInputAction: obscure ? TextInputAction.done : TextInputAction.next,
           validator: validator,
+          style: GoogleFonts.nunito(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: Icon(icon, size: 20, color: AppColors.textMuted),
+            hintStyle: GoogleFonts.nunito(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textMuted,
+            ),
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 12, right: 4),
+              child: AuthIconBadge(icon: icon),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 56),
             suffixIcon: suffix,
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: AppColors.background,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(
+                color: AppColors.primary.withValues(alpha: 0.15),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(
+                color: AppColors.primary.withValues(alpha: 0.15),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              borderRadius: BorderRadius.circular(18),
+              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: const BorderSide(color: AppColors.discount),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,

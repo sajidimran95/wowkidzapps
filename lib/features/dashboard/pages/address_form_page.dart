@@ -78,14 +78,24 @@ class _AddressFormPageState extends State<AddressFormPage> {
 
     if (!mounted) return;
     setState(() => _isSaving = false);
-    Navigator.pop(context);
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+
+    final savedId = _isEditing
+        ? address.id
+        : controller.addresses.isNotEmpty
+            ? controller.addresses.last.id
+            : address.id;
+
+    Navigator.pop(context, savedId);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          error == null
-              ? (_isEditing ? 'Address updated' : 'Address saved')
-              : error,
-        ),
+        content: Text(_isEditing ? 'Address updated' : 'Address saved'),
         behavior: SnackBarBehavior.floating,
       ),
     );

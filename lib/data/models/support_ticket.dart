@@ -1,5 +1,5 @@
 import 'package:my_first_app/core/network/json_utils.dart';
-import 'package:my_first_app/data/models/customer_order.dart';
+import 'package:my_first_app/shared/utils/bangladesh_time.dart';
 
 enum TicketStatus { open, inProgress, resolved }
 
@@ -41,8 +41,8 @@ class SupportTicket {
       id: readString(json['id'] ?? json['ticket_id']),
       subject: readString(json['subject'] ?? json['title']),
       message: readString(json['message'] ?? json['body']),
-      createdAt: DateTime.tryParse(readString(json['created_at'])) ??
-          DateTime.now(),
+      createdAt: parseApiDateTime(readString(json['created_at'])) ??
+          bangladeshNow(),
       status: TicketStatusX.fromString(readString(json['status'], 'open')),
       attachmentName: readNullableString(
         json['attachment_name'] ?? json['attachment'],
