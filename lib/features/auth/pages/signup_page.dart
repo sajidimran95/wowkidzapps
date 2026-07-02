@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/features/auth/pages/customer_login_welcome_page.dart';
+import 'package:my_first_app/features/auth/pages/verify_email_page.dart';
 import 'package:my_first_app/features/auth/pages/login_page.dart';
 import 'package:my_first_app/features/auth/widgets/auth_shared_widgets.dart';
 import 'package:my_first_app/features/auth/widgets/auth_ui.dart';
@@ -47,8 +48,16 @@ class _SignupPageState extends State<SignupPage> {
     final name = _nameController.text.trim();
     final role = _registerAs == RegisterAs.customer ? 'Customer' : 'Vendor';
     final contact = parseContact(_contactController.text.trim());
+    final resolvedContact = contact.email ?? contact.phone;
+    if (resolvedContact == null) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid email or mobile number.')),
+      );
+      return;
+    }
 
-    final error = await AppController.instance.signup(
+    final result = await AppController.instance.signup(
       name: name,
       phone: contact.phone,
       email: contact.email,
@@ -59,9 +68,22 @@ class _SignupPageState extends State<SignupPage> {
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (error != null) {
+    if (result.needsVerification) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => VerifyEmailPage(
+            contact: result.contact ?? resolvedContact,
+            password: _passwordController.text,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!result.isSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
+        SnackBar(content: Text(result.message ?? 'Registration failed')),
       );
       return;
     }

@@ -9,6 +9,7 @@ import 'package:my_first_app/features/home/widgets/newsletter_banner.dart';
 import 'package:my_first_app/features/home/widgets/product_section.dart';
 import 'package:my_first_app/features/home/widgets/promo_banner_carousel.dart';
 import 'package:my_first_app/features/home/widgets/recommended_product_grid.dart';
+import 'package:my_first_app/features/home/widgets/three_column_banner_row.dart';
 import 'package:my_first_app/features/home/widgets/website_popup_overlay.dart';
 import 'package:my_first_app/features/search/pages/search_results_page.dart';
 import 'package:my_first_app/shared/widgets/api_state_views.dart';
@@ -120,6 +121,11 @@ class _HomePageState extends State<HomePage> {
                             title: _catalog.newArrivalTitle,
                             products: _catalog.newArrivals,
                             sectionKey: 'new_arrival',
+                          ),
+                        if (_catalog.showRecommendedTopBanners &&
+                            _catalog.recommendedTopBanners.isNotEmpty)
+                          ThreeColumnBannerRow(
+                            banners: _catalog.recommendedTopBanners,
                           ),
                         if (_catalog.recommendedForHome.isNotEmpty)
                           RecommendedProductGrid(

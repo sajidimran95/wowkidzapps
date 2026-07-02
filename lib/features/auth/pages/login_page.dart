@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:my_first_app/core/app/app_controller.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/features/auth/pages/customer_login_welcome_page.dart';
+import 'package:my_first_app/features/auth/pages/forgot_password_page.dart';
+import 'package:my_first_app/features/auth/pages/verify_email_page.dart';
 import 'package:my_first_app/features/auth/pages/signup_page.dart';
 import 'package:my_first_app/features/auth/widgets/auth_shared_widgets.dart';
 import 'package:my_first_app/features/auth/widgets/auth_ui.dart';
@@ -34,17 +36,32 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     final contact = parseContact(_contactController.text.trim());
-    final error = await AppController.instance.login(
-      contact: contact.phone ?? contact.email ?? _contactController.text.trim(),
+    final resolved = contact.phone ?? contact.email ?? _contactController.text.trim();
+
+    final result = await AppController.instance.login(
+      contact: resolved,
       password: _passwordController.text,
     );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (error != null) {
+    if (result.needsVerification) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => VerifyEmailPage(
+            contact: result.contact ?? resolved,
+            password: _passwordController.text,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!result.isSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
+        SnackBar(content: Text(result.message ?? 'Login failed')),
       );
       return;
     }
@@ -144,7 +161,13 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                   const Spacer(),
                                   TextButton(
-                                    onPressed: () {},
+                                    onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const ForgotPasswordPage(),
+                                      ),
+                                    ),
                                     child: Text(
                                       'Forgot?',
                                       style: AuthTextStyles.link(context),

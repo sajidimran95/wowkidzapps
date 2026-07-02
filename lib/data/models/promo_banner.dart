@@ -8,6 +8,7 @@ class PromoBanner {
     this.gradient = const [Color(0xFFE91E8C), Color(0xFFFF6B9D)],
     this.icon = Icons.image_outlined,
     this.imageUrl,
+    this.link,
   });
 
   final String title;
@@ -15,6 +16,7 @@ class PromoBanner {
   final List<Color> gradient;
   final IconData icon;
   final String? imageUrl;
+  final String? link;
 
   factory PromoBanner.fromJson(Map<String, dynamic> json) {
     final colors = asJsonList(json['gradient'] ?? json['colors'])
@@ -35,6 +37,7 @@ class PromoBanner {
       imageUrl: readNullableString(
         json['image'] ?? json['image_url'] ?? json['banner'],
       ),
+      link: readNullableString(json['link'] ?? json['url']),
     );
   }
 }

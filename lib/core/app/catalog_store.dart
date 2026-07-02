@@ -41,6 +41,7 @@ class CatalogStore extends ChangeNotifier {
   List<CategoryItem> categories = [];
   List<PromoBanner> sliderBanners = [];
   List<PromoBanner> homeSideBanners = [];
+  List<PromoBanner> recommendedTopBanners = [];
   List<Product> flashDeals = [];
   List<Product> hotCollection = [];
   List<Product> newArrivals = [];
@@ -82,6 +83,7 @@ class CatalogStore extends ChangeNotifier {
   }
   bool showCampaign = true;
   bool showHotCollection = true;
+  bool showRecommendedTopBanners = true;
 
   final Map<String, Product> _productById = {};
   final Map<String, List<Product>> _productsByCategory = {};
@@ -227,6 +229,9 @@ class CatalogStore extends ChangeNotifier {
     _applyFeatures(map['features']);
     _applySliders(map['sliders'] ?? map['slider_banners']);
     _applySideBanners(map['side_banners'] ?? map['banners']);
+    _applyRecommendedTopBanners(
+      map['three_column_banners'] ?? map['banner_first'],
+    );
     _applyCategories(map['categories']);
     _applySections(asJsonMap(map['sections'] ?? map));
     if (recommended.isEmpty) {
@@ -271,6 +276,11 @@ class CatalogStore extends ChangeNotifier {
         _applySideBanners(banners);
       } catch (_) {}
     }
+
+    try {
+      final topBanners = await _api.getBanners(type: 'three_column');
+      _applyRecommendedTopBanners(topBanners);
+    } catch (_) {}
 
     final categoryList = await _api.getCategories();
     _applyCategories(categoryList);
@@ -370,9 +380,18 @@ class CatalogStore extends ChangeNotifier {
   void _applySideBanners(dynamic raw) {
     final list = asJsonList(raw);
     if (list.isEmpty) return;
-    final banners =
+    homeSideBanners =
         list.map((e) => PromoBanner.fromJson(asJsonMap(e))).toList();
-    homeSideBanners = banners.length > 2 ? banners.take(2).toList() : banners;
+  }
+
+  void _applyRecommendedTopBanners(dynamic raw) {
+    final list = asJsonList(raw);
+    if (list.isEmpty) return;
+    recommendedTopBanners = list
+        .map((e) => PromoBanner.fromJson(asJsonMap(e)))
+        .where((b) => b.imageUrl != null && b.imageUrl!.trim().isNotEmpty)
+        .take(3)
+        .toList();
   }
 
   void _applyCategories(dynamic raw) {
@@ -493,6 +512,10 @@ class CatalogStore extends ChangeNotifier {
     final visibility = asJsonMap(map['section_visibility']);
     showCampaign = readBool(visibility['campaign'], showCampaign);
     showHotCollection = readBool(visibility['hot_collection'], showHotCollection);
+    showRecommendedTopBanners = readBool(
+      visibility['three_column_banners'],
+      showRecommendedTopBanners,
+    );
   }
 
   List<Product> _parseProducts(dynamic raw) {

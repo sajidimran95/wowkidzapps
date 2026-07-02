@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:my_first_app/core/theme/app_colors.dart';
 import 'package:my_first_app/features/auth/widgets/auth_ui.dart';
@@ -142,6 +143,7 @@ class AuthInputField extends StatelessWidget {
     this.suffix,
     this.validator,
     this.required = false,
+    this.inputFormatters,
   });
 
   final TextEditingController controller;
@@ -153,6 +155,7 @@ class AuthInputField extends StatelessWidget {
   final Widget? suffix;
   final String? Function(String?)? validator;
   final bool required;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -174,6 +177,7 @@ class AuthInputField extends StatelessWidget {
           enableSuggestions: !obscure,
           textInputAction: obscure ? TextInputAction.done : TextInputAction.next,
           validator: validator,
+          inputFormatters: inputFormatters,
           style: GoogleFonts.nunito(
             fontSize: 15,
             fontWeight: FontWeight.w600,

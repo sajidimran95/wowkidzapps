@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_first_app/core/app/auth_result.dart';
 import 'package:my_first_app/core/app/catalog_store.dart';
 import 'package:my_first_app/core/network/api_exception.dart';
 import 'package:my_first_app/core/network/json_utils.dart';
@@ -109,7 +110,7 @@ class AppController extends ChangeNotifier {
 
   String? get userContact => userPhone ?? userEmail;
 
-  Future<String?> login({
+  Future<AuthResult> login({
     required String contact,
     required String password,
   }) async {
@@ -121,20 +122,26 @@ class AppController extends ChangeNotifier {
       final data = await _api.login(contact: contact, password: password);
       await _applyAuthResponse(data, password: password);
       await loadCustomerData();
-      return null;
+      return const AuthResult.success();
     } on ApiException catch (e) {
+      if (e.statusCode == 403 && e.details is Map) {
+        final details = asJsonMap(e.details);
+        if (readBool(details['requires_verification'], false)) {
+          return AuthResult.needsVerification(contact);
+        }
+      }
       authError = e.message;
-      return e.message;
+      return AuthResult.error(e.message);
     } catch (e) {
       authError = e.toString();
-      return authError;
+      return AuthResult.error(authError!);
     } finally {
       isAuthLoading = false;
       notifyListeners();
     }
   }
 
-  Future<String?> signup({
+  Future<AuthResult> signup({
     required String name,
     String? phone,
     String? email,
@@ -153,6 +160,36 @@ class AppController extends ChangeNotifier {
         password: password,
         role: role,
       );
+      final contact = email ?? phone;
+      if (readBool(data['requires_verification'], false) && contact != null) {
+        return AuthResult.needsVerification(contact);
+      }
+      await _applyAuthResponse(data, password: password);
+      await loadCustomerData();
+      return const AuthResult.success();
+    } on ApiException catch (e) {
+      authError = e.message;
+      return AuthResult.error(e.message);
+    } catch (e) {
+      authError = e.toString();
+      return AuthResult.error(authError!);
+    } finally {
+      isAuthLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> verifyEmail({
+    required String contact,
+    required String code,
+    String? password,
+  }) async {
+    isAuthLoading = true;
+    authError = null;
+    notifyListeners();
+
+    try {
+      final data = await _api.verifyEmail(contact: contact, code: code);
       await _applyAuthResponse(data, password: password);
       await loadCustomerData();
       return null;
@@ -162,6 +199,57 @@ class AppController extends ChangeNotifier {
     } catch (e) {
       authError = e.toString();
       return authError;
+    } finally {
+      isAuthLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> resendVerification({required String contact}) async {
+    try {
+      await _api.resendVerification(contact: contact);
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> requestPasswordReset({required String contact}) async {
+    isAuthLoading = true;
+    notifyListeners();
+    try {
+      await _api.forgotPassword(contact: contact);
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
+    } finally {
+      isAuthLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> resetPassword({
+    required String contact,
+    required String code,
+    required String password,
+  }) async {
+    isAuthLoading = true;
+    notifyListeners();
+    try {
+      await _api.resetPassword(
+        contact: contact,
+        code: code,
+        password: password,
+      );
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
     } finally {
       isAuthLoading = false;
       notifyListeners();

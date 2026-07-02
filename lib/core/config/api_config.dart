@@ -22,6 +22,10 @@ abstract final class ApiConfig {
   static const logout = '/auth/logout';
   static const profile = '/auth/profile';
   static const changePassword = '/auth/change-password';
+  static const verifyEmail = '/auth/verify-email';
+  static const resendVerification = '/auth/resend-verification';
+  static const forgotPassword = '/auth/forgot-password';
+  static const resetPassword = '/auth/reset-password';
 
   // Customer
   static const orders = '/orders';

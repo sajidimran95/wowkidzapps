@@ -162,6 +162,57 @@ class WowKidzApi {
     return _client.asMap(json);
   }
 
+  Future<Map<String, dynamic>> verifyEmail({
+    required String contact,
+    required String code,
+  }) async {
+    final json = await _client.post(
+      ApiConfig.verifyEmail,
+      data: {
+        'email_or_phone': contact,
+        'code': code,
+      },
+    );
+    return _client.asMap(json);
+  }
+
+  Future<Map<String, dynamic>> resendVerification({
+    required String contact,
+  }) async {
+    final json = await _client.post(
+      ApiConfig.resendVerification,
+      data: {'email_or_phone': contact},
+    );
+    return _client.asMap(json);
+  }
+
+  Future<Map<String, dynamic>> forgotPassword({
+    required String contact,
+  }) async {
+    final json = await _client.post(
+      ApiConfig.forgotPassword,
+      data: {'email_or_phone': contact},
+    );
+    return _client.asMap(json);
+  }
+
+  Future<Map<String, dynamic>> resetPassword({
+    required String contact,
+    required String code,
+    required String password,
+  }) async {
+    final json = await _client.post(
+      ApiConfig.resetPassword,
+      data: {
+        'email_or_phone': contact,
+        'code': code,
+        'password': password,
+        'password_confirmation': password,
+      },
+    );
+    return _client.asMap(json);
+  }
+
   Future<void> logout() async {
     try {
       await _client.post(ApiConfig.logout);
