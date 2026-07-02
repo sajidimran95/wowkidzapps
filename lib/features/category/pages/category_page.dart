@@ -7,7 +7,16 @@ import 'package:my_first_app/features/search/widgets/live_search_bar.dart';
 import 'package:my_first_app/shared/utils/search_navigation.dart';
 import 'package:my_first_app/shared/widgets/api_state_views.dart';
 import 'package:my_first_app/shared/widgets/category_image.dart';
-import 'package:my_first_app/shared/widgets/section_header.dart';
+
+const _headerGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFFC2185B),
+    AppColors.primary,
+    Color(0xFFFF6B9D),
+  ],
+);
 
 class CategoryPage extends StatefulWidget {
   const CategoryPage({super.key});
@@ -62,63 +71,42 @@ class _CategoryPageState extends State<CategoryPage> {
 
         return Scaffold(
           backgroundColor: AppColors.background,
-          body: SafeArea(
-            child: RefreshIndicator(
-              onRefresh: () => _catalog.loadHome(refresh: true),
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SectionHeader(title: 'Categories'),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                          child: Text(
-                            'Browse ${categories.length} collections',
-                            style:
-                                Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: AppColors.textMuted,
-                                    ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: LiveSearchBar(
-                            controller: _searchController,
-                            onSubmitted: (query) =>
-                                openProductSearch(context, query),
-                          ),
-                        ),
-                      ],
+          body: RefreshIndicator(
+            color: AppColors.primary,
+            onRefresh: () => _catalog.loadHome(refresh: true),
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _CategoryPinkHeader(
+                    categoryCount: categories.length,
+                    searchController: _searchController,
+                    onSearch: (query) => openProductSearch(context, query),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 14,
+                      crossAxisSpacing: 14,
+                      childAspectRatio: 0.78,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final category = categories[index];
+                        return _PinkCategoryTile(
+                          category: category,
+                          productCount:
+                              _catalog.productCountForCategory(category.name),
+                          index: index,
+                        );
+                      },
+                      childCount: categories.length,
                     ),
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16),
-                    sliver: SliverGrid(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 14,
-                        crossAxisSpacing: 14,
-                        childAspectRatio: 0.82,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final category = categories[index];
-                          return _CategoryTile(
-                            category: category,
-                            productCount:
-                                _catalog.productCountForCategory(category.name),
-                          );
-                        },
-                        childCount: categories.length,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -127,14 +115,217 @@ class _CategoryPageState extends State<CategoryPage> {
   }
 }
 
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({
+class _CategoryPinkHeader extends StatelessWidget {
+  const _CategoryPinkHeader({
+    required this.categoryCount,
+    required this.searchController,
+    required this.onSearch,
+  });
+
+  final int categoryCount;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: _headerGradient,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(28),
+              bottomRight: Radius.circular(28),
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 72),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.grid_view_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Categories',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Browse $categoryCount shop collections',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _HeaderStatChip(
+                        icon: Icons.local_offer_outlined,
+                        label: 'Kids fashion',
+                      ),
+                      const SizedBox(width: 8),
+                      _HeaderStatChip(
+                        icon: Icons.favorite_border,
+                        label: 'WowKidz picks',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: -26,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.22),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: LiveSearchBar(
+                  controller: searchController,
+                  onSubmitted: onSearch,
+                  hintText: 'Search categories & products...',
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 48,
+          right: -24,
+          child: _DecorCircle(size: 88, alpha: 0.12),
+        ),
+        Positioned(
+          top: 120,
+          left: -16,
+          child: _DecorCircle(size: 56, alpha: 0.1),
+        ),
+      ],
+    );
+  }
+}
+
+class _DecorCircle extends StatelessWidget {
+  const _DecorCircle({required this.size, required this.alpha});
+
+  final double size;
+  final double alpha;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: alpha),
+      ),
+    );
+  }
+}
+
+class _HeaderStatChip extends StatelessWidget {
+  const _HeaderStatChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PinkCategoryTile extends StatelessWidget {
+  const _PinkCategoryTile({
     required this.category,
     required this.productCount,
+    required this.index,
   });
 
   final CategoryItem category;
   final int productCount;
+  final int index;
+
+  Color get _accentPink {
+    final tints = [
+      const Color(0xFFFFE4EC),
+      const Color(0xFFFFF0F5),
+      const Color(0xFFFFD6E8),
+      const Color(0xFFFFECF3),
+    ];
+    return Color.lerp(category.color, tints[index % tints.length], 0.55)!;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,42 +338,126 @@ class _CategoryTile extends StatelessWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(22),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              _accentPink.withValues(alpha: 0.35),
+            ],
+          ),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.12),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                child: CategoryImage(
-                  category: category,
-                  fill: true,
-                  borderRadius: 16,
-                ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              _accentPink,
+                              Colors.white,
+                            ],
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: CategoryImage(
+                            category: category,
+                            fill: true,
+                            borderRadius: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 14,
+                    right: 14,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primary, Color(0xFFFF6B9D)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.35),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '$productCount',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
               child: Column(
                 children: [
                   Text(
                     category.name,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryDark,
+                          height: 1.2,
                         ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$productCount products',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.textMuted,
-                        ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.shopping_bag_outlined,
+                        size: 13,
+                        color: AppColors.primary.withValues(alpha: 0.8),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        productCount == 1
+                            ? '1 product'
+                            : '$productCount products',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -82,13 +82,19 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final countLabel = _isLoading
+        ? 'Loading collection...'
+        : '${_products.length} items in this category';
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(_activeCategory),
-        actions: [
-          IconButton(
-            onPressed: () {
+      body: Column(
+        children: [
+          _PinkCategoryHeader(
+            title: _activeCategory,
+            category: widget.category,
+            countLabel: countLabel,
+            onSearch: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -96,46 +102,202 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                 ),
               );
             },
-            icon: const Icon(Icons.search),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const ApiLoadingView(message: 'Loading products...')
+                : _error != null && _products.isEmpty
+                    ? ApiErrorView(message: _error!, onRetry: _loadProducts)
+                    : ProductListingView(
+                        allProducts: _products,
+                        filters: _filters,
+                        onFiltersChanged: _onFiltersChanged,
+                        showCategoryFilter: true,
+                        categoryOptions: _categoryOptions,
+                        emptyWidget: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.categoryPink,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: CategoryImage(
+                                    category: widget.category,
+                                    size: 72,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No products yet',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        color: AppColors.primaryDark,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Products for $_activeCategory coming soon.',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
           ),
         ],
       ),
-      body: _isLoading
-          ? const ApiLoadingView(message: 'Loading products...')
-          : _error != null && _products.isEmpty
-              ? ApiErrorView(message: _error!, onRetry: _loadProducts)
-              : ProductListingView(
-                  allProducts: _products,
-                  filters: _filters,
-                  onFiltersChanged: _onFiltersChanged,
-                  showCategoryFilter: true,
-                  categoryOptions: _categoryOptions,
-                  emptyWidget: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CategoryImage(
-                            category: widget.category,
-                            size: 72,
+    );
+  }
+}
+
+class _PinkCategoryHeader extends StatelessWidget {
+  const _PinkCategoryHeader({
+    required this.title,
+    required this.category,
+    required this.countLabel,
+    required this.onSearch,
+  });
+
+  final String title;
+  final CategoryItem category;
+  final String countLabel;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFC2185B),
+            AppColors.primary,
+            Color(0xFFFF6B9D),
+          ],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 4, 12, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.maybePop(context),
+                    icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                  ),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No products yet',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Products for $_activeCategory coming soon.',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: onSearch,
+                    icon: const Icon(Icons.search, color: Colors.white),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(5),
+                        child: CategoryImage(
+                          category: category,
+                          fill: true,
+                          borderRadius: 12,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.shopping_bag_outlined,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                countLabel,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
